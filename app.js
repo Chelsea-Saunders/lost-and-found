@@ -1,7 +1,5 @@
 const express = require("express");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const storeClass = MongoStore.default || MongoStore;
+const sessionConfig = require("./src/config/session");
 const swaggerui = require("swagger-ui-express");
 
 const swaggerDocument = require("./swagger-output.json");
@@ -25,16 +23,7 @@ app.use(
 );
 
 // SESSION SETUP
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: storeClass.create({
-      mongoUrl: process.env.MONGODB_URI,
-    }),
-  }),
-);
+app.use(sessionConfig);
 
 //PASSPORT MIDDLEWARE
 //app.use(passport.initialize());
