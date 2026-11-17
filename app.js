@@ -35,7 +35,7 @@ app.use(passport.session());
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerDocument));
 
 // Routes
-// app.use("/", routes);
+app.use("/", routes);
 
 // 404 ERROR HANDLER
 app.use((req, res, next) => {
