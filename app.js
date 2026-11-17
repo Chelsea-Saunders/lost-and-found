@@ -3,11 +3,13 @@ const sessionConfig = require("./src/config/session");
 const swaggerui = require("swagger-ui-express");
 
 const swaggerDocument = require("./swagger-output.json");
-//const passport = require('./src/config/passport');
+const passport = require("./src/config/passport");
 const routes = require("./src/routes");
 const cors = require("cors");
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 // BODY PARSERS
 app.use(express.json());
@@ -26,8 +28,8 @@ app.use(
 app.use(sessionConfig);
 
 //PASSPORT MIDDLEWARE
-//app.use(passport.initialize());
-//app.use(passport.session());
+app.use(passport.initialize());
+app.use(passport.session());
 
 // SWAGGER
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerDocument));
