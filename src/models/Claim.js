@@ -44,6 +44,10 @@ const ClaimSchema = new mongoose.Schema({
   },
 );
 
-ClaimSchema.index({ itemId: 1, userId: 1 }, { unique: true });
+// unique compound indes: combines postId and userId to ensure the same combination can not exist more than once in database
+ClaimSchema.index(
+  { postId: 1, userId: 1 }, 
+  { unique: true }
+);
 
 module.exports = mongoose.model("Claim", ClaimSchema);

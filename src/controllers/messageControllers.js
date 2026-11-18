@@ -15,7 +15,7 @@ const canAccessClaim = async (claim, userId) => {
         return false;
     }
 
-    const isPostOwner = String(post.user) === String(userId);
+    const isPostOwner = String(post.userId) === String(userId);
     return isPostOwner;
 };
 

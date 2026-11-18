@@ -33,11 +33,12 @@ const UserSchema = new mongoose.Schema(
     timestamp: true
 });
 
+// store/verify users passwords when logging in 
 UserSchema.pre('save', async function () {
     if(!this.isModified('password')) return;
 
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = bcrypt.hash(this.password, salt);
 });
 
 UserSchema.methods.matchPassword = async function(enteredPassword) {

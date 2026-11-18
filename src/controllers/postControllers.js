@@ -26,7 +26,7 @@ const getPostById = async (req, res) => {
 
 const createPost = async (req, res) => {
      try {
-        const { title, content, category, status } = req.body;
+        const { title, description, type, imageUrl, category, location, eventDate, status } = req.body;
 
         // only allow lost or found when post is created
         if (status !== undefined && 
@@ -37,10 +37,14 @@ const createPost = async (req, res) => {
         }
 
         const newPost = await Post.create({
-            user: req.user._id,
+            userId: req.user._id,
             title,
-            content,
+            description,
+            type,
+            imageUrl,
             category,
+            location,
+            eventDate,
             status
         });
 
@@ -63,30 +67,30 @@ const updatePost = async (req, res) => {
     try {
         const { title, content, category, status } = req.body;
         if (status !== undefined && 
-            !['lost', 'found', 'returned'].includes(status)) {
+            !['lost', 'found', 'archived'].includes(status)) {
                 return res.status(400).json({
                     message: 'Invalid status'
                 });
             }
 
-        const item = req.item; //loads the middleware
+        const post = req.post; //loads the middleware
 
         if(title !== undefined) {
-            item.title = title;
+            post.title = title;
         }
         if(content !== undefined) {
-            item.content = content;
+            post.content = content;
         }
         if (category !== undefined) {
-            item.category = category;
+            post.category = category;
         }
         if (status !== undefined) {
-            item.status = status;
+            post.status = status;
         }
 
-//         await item.save();
+        await post.save();
 
-        res.json(item);
+        res.json(post);
 
     } catch (err) {
         console.error(err);

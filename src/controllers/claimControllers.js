@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Claim = require('../models/Claim');
-const Item = require('../models/Post');
+const Post = require('../models/Post');
 
 const isAdmin = (user) => user?.role === 'admin';
 
@@ -10,21 +10,6 @@ const isOwner = (ownerId, userId) =>
 // create claim
 const createClaim = async (req, res) => {
     try {
-        const item = await Item.findById(req.params.id);
-
-        if(!item) {
-            return res.status(404).json({
-                message:'Item not found'
-            });
-        }
-
-        // check: item owner cannot laim their own item
-        if (isOwner(item.user, req.user._id)) {
-            return res.status(403).json({
-                message: 'Cannot claim your own item'
-            });
-        }
-
         const { postId, proof } = req.body;
 
         if(!mongoose.isValidObjectId(postId)) {
@@ -42,21 +27,21 @@ const createClaim = async (req, res) => {
         const post = await Post.findById(postId);
 
         if(!post) {
-            return res.status(400).json({
+            return res.status(404).json({
                 message: 'Post not found'
             });
         }
 
-        if (String(post.user) === String(req.user._id)) {
+        if (isOwner(post.userId, req.user._id)) {
             return res.status(403).json({
-                message: 'You cannot claim your own post'
+                message: 'Cannot claim your own post'
             });
         }
 
         const newClaim = await Claim.create({
             postId,
             userId: req.user._id,
-            proof
+            proof: proof.trim()
         });
 
         res.status(201).json({
@@ -66,7 +51,9 @@ const createClaim = async (req, res) => {
 
     } catch (err) {
         console.error(err)
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
@@ -83,6 +70,7 @@ const getAllClaims = async (req, res) => {
             .lean();
 
         res.json(claims);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ 
@@ -101,17 +89,17 @@ const getClaimById = async (req, res) => {
             });
         }
 
-        const item = await Item.findById(claims.itemId);
+        const post = await Post.findById(claims.postId);
 
-        if(!item) {
+        if(!post) {
             return res.status(404).json({
-                message: 'Item not found'
+                message: 'Post not found'
             });
         }
 
         const canView =
-            isOwner(claim.userId, req.user._id) ||
-            isOwner(item.user, req.user._id) ||
+            isOwner(claims.userId, req.user._id) ||
+            isOwner(post.userId, req.user._id) ||
             isAdmin(req.user);
 
         if(!canView) {
@@ -124,22 +112,24 @@ const getClaimById = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
-const getItemClaims = async (req, res) => {
+const getPostClaims = async (req, res) => {
     try {
-        const item = await Item.findById(req.params.id);
+        const post = await Post.findById(req.params.id);
 
-        if(!item) {
+        if(!post) {
             return res.status(404).json({
-                message: 'Item not found'
+                message: 'Post not found'
             });
         }
 
         const canView = 
-            isOwner(item.user, req.user._id) ||
+            isOwner(post.userId, req.user._id) ||
             isAdmin(req.user);
 
         if(!canView) {
@@ -149,7 +139,7 @@ const getItemClaims = async (req, res) => {
         }
 
         const claim = await Claim.find({ 
-            itemId: req.params.id 
+            postId: req.params.id 
         })
             .sort({ createdAt: -1 })
             .lean();
@@ -158,7 +148,9 @@ const getItemClaims = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
@@ -167,13 +159,13 @@ const updateClaim = async (req, res) => {
         const claim = await Claim.findById(req.params.id);
 
         if (!claim) {
-            return res.status(40).json({ 
+            return res.status(404).json({ 
                 message: 'Claim not found' 
             });
         }
 
         const canEdit =
-            isOwner(claim.userId, req,user._id) ||
+            isOwner(claim.userId, req.user._id) ||
             isAdmin(req.user);
 
         if (!canEdit) {
@@ -204,7 +196,9 @@ const updateClaim = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ messge: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
@@ -227,13 +221,15 @@ const deleteClaim = async (req, res) => {
         await claim.deleteOne();
 
         res.json({
-            message: 'Claim deleted'
+            message: 'Posted claim deleted'
         });
 
     } catch (err) {
 
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
@@ -243,28 +239,28 @@ const updateClaimStatus = async (req, res) => {
 
         if(!['approved', 'rejected'].includes(status)) {
             return res.status(400).json({
-                message: 'Satus must be approved'
+                message: 'Status must be approved or rejected'
             });
         }
 
         const claim = await Claim.findById(req.params.id);
 
         if(!claim) {
-            return res.status(400).json({
+            return res.status(404).json({
                 message: 'Claim not found'
             });
         }
 
-        const item = await Item.findById(claim.itemId);
+        const post = await Post.findById(claim.postId);
         
-        if(!item) {
+        if(!post) {
             return res.status(404).json({
-                message: 'Item not found'
+                message: 'Post not found'
             });
         }
 
         const canReview = 
-            isOwner(item.user, req.user._id) ||
+            isOwner(post.userId, req.user._id) ||
             isAdmin(req.user);
         
         if(!canReview){
@@ -294,12 +290,19 @@ const updateClaimStatus = async (req, res) => {
 
         await claim.save();
 
+        if (status === 'approved') {
+            post.status = 'archived';
+            await post.save();
+        }
+
         res.json(claim);
 
     } catch (err) {
         
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
     }
 };
 
@@ -307,7 +310,7 @@ module.exports = {
     createClaim, 
     getAllClaims, 
     getClaimById, 
-    getItemClaims, 
+    getPostClaims, 
     updateClaim, 
     deleteClaim, 
     updateClaimStatus

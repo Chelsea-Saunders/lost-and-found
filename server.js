@@ -17,6 +17,6 @@ connectDB()
   });
 
 require("./src/models/User");
-require("./src/models/Item");
+require("./src/models/Post");
 require("./src/models/Claim");
 require("./src/models/Message");
