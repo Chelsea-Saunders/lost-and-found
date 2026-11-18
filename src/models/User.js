@@ -1,33 +1,28 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const mongoose = require("mongoose");
 
-const UserSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema(
+  {
     name: {
         type: String,
         required: true,
         trim: true
     },
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true
-    },
-    password: {
-        type: String, 
-        required: function() {
-            return !this.googleId && !this.githubId;
-        },
-        select: false
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
     },
     googleId: {
-        type: String, 
-        sparse: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
     githubId: {
-        type: String, 
-        sparse: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
     role: {
         type: String, 

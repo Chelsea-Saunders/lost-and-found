@@ -2,20 +2,40 @@ const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Claim = require('../models/Claim');
 
+const Post = require('../models/Post');
+
 // check claim permission
 const canAccessClaim = async (claim, userId) => {
-    return claim.userId?.toString() === userId.toString();
+    if (isClaimant) {
+        return true;
+    }
+    const post = await Post.findById(clain.postId);
+
+    if (!post) {
+        return false;
+    }
+
+    const isPostOwner = String(post.user) === String(userId);
+    return isPostOwner;
 };
+
 
 // create new message
 const createMessage = async (req, res) => {
     try {
         const userId = req.user?._id;
-        const { claimId, content } = req.body;
+        const { claimId } = req.params;
+        const { content } = req.body
 
         if (!userId) {
             return res.status(401).json({ 
                 message: 'Authentication required' 
+            });
+        }
+
+        if (!mongoose.isValidObjectId(claimId)) {
+            return res.status(400).json({
+                message: 'Invalid claim Id'
             });
         }
         // validate message content
@@ -32,7 +52,13 @@ const createMessage = async (req, res) => {
 
         if(!claim) {
             return res.status(400).json({
-                message: 'Access denied'
+                message: 'Claim not found'
+            });
+        }
+
+        if (!(await canAccessClaim(claim, userId))) {
+            return res.status(403).json({
+                message: 'Access Denied'
             });
         }
 
@@ -91,7 +117,7 @@ const getMessagesByClaim = async (req, res) => {
         }
 
         const messages = await Message.find({ claimId })
-            .sort({ createAt: 1 })
+            .sort({ createdAt: 1 })
             .limit(100);
 
         return res.status(200).json(messages);
@@ -132,7 +158,7 @@ const markMessageAsRead = async (req, res) => {
 
         const claim = await Claim.findById(message.claimId) 
 
-        if (!claim || !canAccessCalim(claim, userId)) {
+        if (!claim || !(await canAccessClaim(claim, userId))) {
             return res.status(403).json({
                 message: 'Access denied'
             });
@@ -141,7 +167,7 @@ const markMessageAsRead = async (req, res) => {
         // sender can mark message as read
         if (message.senderId.toString() === userId.toString()) {
             return res.status(403).json({
-                message: 'Cannon mark your own message as read'
+                message: 'Cannot mark your own message as read'
             });
         }
 

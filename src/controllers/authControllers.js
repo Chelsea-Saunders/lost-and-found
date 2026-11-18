@@ -1,6 +1,5 @@
-
 // GOOGLE and GITHUB CALLBACK
-const authCallbackSession= (req, res) => {
+/*const authCallbackSession= (req, res) => {
     if(!req.user) {
         return res.status(401).json({
             success: false, 
@@ -53,16 +52,9 @@ const logout = (req, res, next) => {
     });
 };
 
-// LOGIN WITH EMAIL
-res.cookie('token', token, {
-    httpOnly: true, 
-    secure: true, 
-    sameSite: 'lax', 
-});
-
 module.exports = {
     authCallbackSession, 
     loginFailure, 
     currentUser, 
     logout, 
-};
+};*/

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const ClaimSchema = new mongoose.Schema({
     postId: {
@@ -7,9 +7,9 @@ const ClaimSchema = new mongoose.Schema({
         required: true,
     },
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     proof: {
         type: String, 
@@ -25,15 +25,25 @@ const ClaimSchema = new mongoose.Schema({
     },
 
     reviewNote: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
+      trim: true,
     },
     reviewedAt: {
-        type: Date, 
-        default: null
-    }
-}, {
-    timestamps: true
-});
+      type: Date,
+      default: null,
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-module.exports = mongoose.model('Claim', ClaimSchema);
+ClaimSchema.index({ itemId: 1, userId: 1 }, { unique: true });
+
+module.exports = mongoose.model("Claim", ClaimSchema);

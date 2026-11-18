@@ -84,7 +84,7 @@ const updatePost = async (req, res) => {
             item.status = status;
         }
 
-        await item.save();
+//         await item.save();
 
         res.json(item);
 

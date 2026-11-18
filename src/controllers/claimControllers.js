@@ -291,7 +291,7 @@ const updateClaimStatus = async (req, res) => {
         claim.status = status;
         claim.reviewNote = reviewNote || '';
         claim.reviewedAt = new Date()
-        
+
         await claim.save();
 
         res.json(claim);

@@ -3,42 +3,45 @@ const router = express.Router();
 
 const { ensureAuth } = require('../middleware/auth');
 const { ensurePostOwner } = require('../middleware/ensurePostOwner');
+const { updateStatus } = require('../controllers/updateStatusController');
 
 const { 
     validateCreatePost,
     validateUpdatePost 
 } = require('../middleware/validatePost');
 
-const itemController = require('../controllers/postControllers');
+const postController = require('../controllers/postControllers');
 
 router.get(
     '/', 
-    itemController.getAllPosts);
+    postController.getAllPosts);
 router.get(
     '/:id', 
-    itemController.getPostById);
+    postController.getPostById);
 router.post(
     '/', 
     ensureAuth, 
     validateCreatePost, 
-    itemController.createPost);
+    postController.createPost);
 
 router.put(
     '/:id', 
     ensureAuth, 
     ensurePostOwner, 
     validateUpdatePost, 
-    itemController.updatePost);
+    postController.updatePost);
 router.delete(
     '/:id', 
     ensureAuth, 
     ensurePostOwner, 
-    itemController.deletePost);
+    postController.deletePost);
+
 router.patch(
     '/:id/status', 
     ensureAuth, 
     ensurePostOwner, 
     validateUpdatePost,
-    itemController.updateStatus);
+    updateStatus
+);
 
 module.exports = router;

@@ -8,7 +8,7 @@ const adminRoutes = require('./adminRoutes');
 const itemRoutes = require('./postRoutes');
 const messageRoutes = require('./messageRoutes');
 
-router.use('/auth', authRoutes);
+router.use('/auth', authRoutes)
 router.use('/users', userRoutes);
 router.use('/claims', claimRoutes);
 router.use('/admin', adminRoutes);

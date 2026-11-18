@@ -12,7 +12,7 @@ const claimSchema = Joi.object({
         .max(1000)
         .required()
 });
-    
+
 
 const claimStatusSchema = Joi.object({
     status: Joi.string()
@@ -26,6 +26,6 @@ const claimStatusSchema = Joi.object({
 });
 
 module.exports = {
-    claimSchema, 
-    claimStatusSchema 
+    claimSchema,
+    claimStatusSchema
 }
