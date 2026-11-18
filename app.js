@@ -5,6 +5,7 @@ const swaggerui = require("swagger-ui-express");
 const swaggerDocument = require("./swagger-output.json");
 const passport = require("./src/config/passport");
 const routes = require("./src/routes");
+const authRoutes = require("./src/routes/authRoutes");
 const cors = require("cors");
 
 const app = express();
@@ -31,6 +32,8 @@ app.use(sessionConfig);
 app.use(passport.initialize());
 app.use(passport.session());
 
+//Authentication Routes
+app.use("/", authRoutes);
 // SWAGGER
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerDocument));
 
