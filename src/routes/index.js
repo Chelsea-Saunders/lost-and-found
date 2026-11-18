@@ -5,7 +5,7 @@ const authRoutes = require('./authRoutes');
 const userRoutes = require('./userRoutes');
 const claimRoutes = require('./claimRoutes');
 const adminRoutes = require('./adminRoutes');
-const itemRoutes = require('./itemRoutes');
+const itemRoutes = require('./postRoutes');
 const messageRoutes = require('./messageRoutes');
 
 router.use('/auth', authRoutes);

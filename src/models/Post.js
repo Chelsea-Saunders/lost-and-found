@@ -21,19 +21,13 @@ const PostSchema = new mongoose.Schema({
         enum: ['jewelry', 'household', 'pet', 'clothing', 'other'],
         default: 'other'
     },
-    likes: [{
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User'
-    }],
     status: {
         type: String,
         enum: ['lost', 'found', 'returned'],
         default: 'lost'
     },
-    createdAt: {
-        type: Date, 
-        default: Date.now
-    }
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Post', PostSchema);

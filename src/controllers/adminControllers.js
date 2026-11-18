@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Claim = require('../models/Claim');
-const Item = require('../models/Item');
+const Item = require('../models/Post');
 
 const getAllUsers = async (req, res) => {
     try {

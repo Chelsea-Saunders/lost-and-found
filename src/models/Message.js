@@ -1,29 +1,32 @@
 const mongoose = require('mongoose');
 
-const CommentSchema = new mongoose.Schema({
-    user: {
+const messageSchema = new mongoose.Schema({
+    claimId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User', 
-        required: true
-    }, 
-    post: {
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Post', 
-        required: true
-    }, 
+        ref: 'Claim',
+        required: true,
+        index: true
+    },
+    senderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        immutable: true
+    },
     content: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        minlength: 1,
+        maxlength: 5000
     },
-    isEdited : {
-        type: Boolean,
-        default: false
-    },
-    createdAt: {
+    readAt: {
         type: Date,
-        default: Date.now
+        default: null
     },
+}, 
+{
+    timestamps: true
 });
 
-module.exports = mongoose.model('Comment', CommentSchema);
+module.exports = mongoose.model('Message', messageSchema);

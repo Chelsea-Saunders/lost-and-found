@@ -1,5 +1,5 @@
 
-function ensureAuth(req, res, next) {
+export const ensureAuth = (req, res, next) => {
     if (req.isAuthenticated && req.isAuthenticated()) {
         return next();
     }
@@ -7,7 +7,7 @@ function ensureAuth(req, res, next) {
     return res.status(401).json({ message: 'Not logged in' });
 }
 
-function ensureAdmin(req, res, next) {
+export const ensureAdmin = (req, res, next) => {
     if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({ message: 'Not logged in'});
     }
@@ -16,8 +16,3 @@ function ensureAdmin(req, res, next) {
     }
     return res.status(403).json({ message: 'Forbidden: Admins only' });
 }
-
-module.exports = {
-    ensureAuth, 
-    ensureAdmin 
-};
