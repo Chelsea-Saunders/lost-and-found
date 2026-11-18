@@ -1,110 +1,131 @@
-// const Item = require('../models/Post');
+const Post = require('../models/Post');
 
-// const getAllPosts = async (req, res) => {
-//     try {
-//         const items = await Item.find().sort({ createdAt: -1 });
-//         res.json(items);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server errlr' });
-//     }
-// };
+const getAllPosts = async (req, res) => {
+    try {
+        const posts = await Post.find().sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-// const getPostById = async (req, res) => {
-//     try {
-//         const item = await Item.findById(req.params.id);
+const getPostById = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
 
-//         if (!item) {
-//             return res.status(404).json({ message: 'Item not found' });
-//         }
-//         res.json(item);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        res.json(post);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-// const createPost = async (req, res) => {
-//      try {
-//         const newItem = await Item.create({
-//             ...req.body, 
-//             userId: req.user._id, 
-//             status: req.body.status || 'open'
-//         });
-//         res.status(201).json(newItem);
-//      } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//      }
-// };
+const createPost = async (req, res) => {
+     try {
+        const { title, content, category, status } = req.body;
 
-// const updatePost = async (req, res) => {
-//     try {
-//         const item = req.item; //loads the middleware
+        // only allow lost or found when post is created
+        if (status !== undefined && 
+            !['lost', 'found'].includes(status)) {
+            return res.status(400).json({
+                message: 'Status must be lost or found'
+            });
+        }
 
-//         item.title = req.body.title;
-//         item.description = req.body.description;
-//         item.type = req.body.type;
-//         item.category = req.body.category;
-//         item.imgageUrl = req.body.imageUrl;
-//         item.location = req.body.location;
-//         item.eventDate = req.body.eventDate;
-//         item.status = req.body.status; 
+        const newPost = await Post.create({
+            user: req.user._id,
+            title,
+            content,
+            category,
+            status
+        });
+
+        res.status(201).json(newPost);
+     } catch (err) {
+        console.error(err);
+
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({
+                message: err.message
+            });
+        }
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
+     }
+};
+
+const updatePost = async (req, res) => {
+    try {
+        const { title, content, category, status } = req.body;
+        if (status !== undefined && 
+            !['lost', 'found', 'returned'].includes(status)) {
+                return res.status(400).json({
+                    message: 'Invalid status'
+                });
+            }
+
+        const item = req.item; //loads the middleware
+
+        if(title !== undefined) {
+            item.title = title;
+        }
+        if(content !== undefined) {
+            item.content = content;
+        }
+        if (category !== undefined) {
+            item.category = category;
+        }
+        if (status !== undefined) {
+            item.status = status;
+        }
 
 //         await item.save();
 
-//         res.json(item);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        res.json(item);
 
-// const deletePost = async (req, res) => {
-//     try {
-//         const item = await Item.findById(req.params.id);
+    } catch (err) {
+        console.error(err);
 
-//         if (!item) {
-//             return res.status(404).json({ message: 'Item not found' });
-//         }
-//         if (String(item.userId) !== String(req.user._id)) {
-//             return res.status(403).json({ message: 'Forbidden' });
-//         }
+        if(err.name === 'ValidationError') {
+            return res.status(400).json({
+                message: err.message
+            });
+        }
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
+    }
+};
 
-//         await Item.findByIdAndDelete(req.params.id);
+const deletePost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
 
-//         res.json({ message: 'Item deleted' });
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        if (String(post.userId) !== String(req.user._id)) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
 
-// const updateStatus = async (req, res) => {
-//     try {
-//         const { status } = req.body;
+        await Post.findByIdAndDelete(req.params.id);
 
-//         const item = await Item.findById(req.params.id);
+        res.json({ message: 'Post deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-//         if(!item) {
-//             return res.status(404).json({ message: 'Item not found' });
-//         }
-
-//         item.status = status;
-//         await item.save();
-
-//         res.json(item);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
-
-// module.exports = {
-//     getAllPosts, 
-//     getPostById, 
-//     createPost, 
-//     updatePost, 
-//     deletePost,
-//     updateStatus
-// }
+module.exports = {
+    getAllPosts, 
+    getPostById, 
+    createPost, 
+    updatePost, 
+    deletePost
+}

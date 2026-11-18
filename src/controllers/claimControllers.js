@@ -1,164 +1,314 @@
+const mongoose = require('mongoose');
+const Claim = require('../models/Claim');
+const Item = require('../models/Post');
 
-// const Claim = require('../models/Claim');
-// const Item = require('../models/Item');
+const isAdmin = (user) => user?.role === 'admin';
 
-// const createClaim = async (req, res) => {
-//     try {
-//         const newClaim = await Claim.create({
-//             itemId: req.params.id, 
-//             userId: req.user._id, 
-//             proof: req.body.proof,
-//             status: 'pending'
-//         });
-//         res.status(201).json(newClaim);
-//     } catch (err) {
-//         console.error(err)
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+const isOwner = (ownerId, userId) => 
+    String(ownerId) === String(userId);
 
-// const getAllClaims = async (req, res) => {
-//     try {
-//         const claims = await Claim.find()
-//             .sort({ createdAt: -1 })
-//             .lean();
+// create claim
+const createClaim = async (req, res) => {
+    try {
+        const item = await Item.findById(req.params.id);
 
-//         res.json(claims);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        if(!item) {
+            return res.status(404).json({
+                message:'Item not found'
+            });
+        }
 
-// const getClaimById = async (req, res) => {
-//     try {
-//         const claims = await Item.findById(req.params.id);
+        // check: item owner cannot laim their own item
+        if (isOwner(item.user, req.user._id)) {
+            return res.status(403).json({
+                message: 'Cannot claim your own item'
+            });
+        }
 
-//         if (!claims) {
-//             return res.status(404).json({ message: 'Claim not found' });
-//         }
-//         res.json(claims);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        const { postId, proof } = req.body;
 
-// const getItemClaims = async (req, res) => {
-//     try {
-//         const claim = await Claim.find({ itemId: req.params.id })
-//             .sort({ createdAt: -1 })
-//             .lean();
+        if(!mongoose.isValidObjectId(postId)) {
+            return res.status(400).json({
+                message: 'Invalid post ID'
+            });
+        }
 
-//         res.json(claim);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        if(typeof proof !== 'string' || !proof.trim()) {
+            return res.status(400).json({
+                message: 'Proof is required'
+            });
+        }
 
-// const updateClaim = async (req, res) => {
-//     try {
-//         const claim = await Claim.findNyId(req.params.id);
+        const post = await Post.findById(postId);
 
-//         if (!claim) {
-//             return res.status(40).jsoin({ message: 'Claim not found' });
-//         }
+        if(!post) {
+            return res.status(400).json({
+                message: 'Post not found'
+            });
+        }
 
-//         if (String(claim.userId) !== String(req.user._id)) {
-//             return res.status(403).json({ message: 'Forbidden' });
-//         }
+        if (String(post.user) === String(req.user._id)) {
+            return res.status(403).json({
+                message: 'You cannot claim your own post'
+            });
+        }
 
-//         if (claim.status !== 'pending') {
-//             return res.stauts(400).json({ message: 'Only pending claims can be updated' });
-//         }
+        const newClaim = await Claim.create({
+            postId,
+            userId: req.user._id,
+            proof
+        });
 
-//         claim.proof = req.body.proof;
-//         await claim.save();
+        res.status(201).json({
+            message: 'Claim submitted successfully',
+            claim: newClaim
+        });
 
-//         res.json(claim);
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ messge: 'Server error' });
-//     }
-// };
+const getAllClaims = async (req, res) => {
+    try {
+        if (!isAdmin(req.user)) {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+        
+        const claims = await Claim.find()
+            .sort({ createdAt: -1 })
+            .lean();
 
-// const deleteClaim = async (req, res) => {
-//     try {
-//         const claim = await Claim.findById(req.params.id);
+        res.json(claims);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ 
+            message: 'Server error' 
+        });
+    }
+};
 
-//         if(!claim) {
-//             return res.status(404).json({ message: 'Claim not found' });
-//         }
+const getClaimById = async (req, res) => {
+    try {
+        const claims = await Claim.findById(req.params.id);
 
-//         if (String(claim.claimId) !== String(req.user._id)) {
-//             return res.status (403).json({ message: 'Forbidden' });
-//         }
+        if (!claims) {
+            return res.status(404).json({ 
+                message: 'Claim not found' 
+            });
+        }
 
-//         if (claim.status !== 'pending') {
-//             return res.status(400).json({ message: 'Only pending claims can be withdrawn' });
-//         }
+        const item = await Item.findById(claims.itemId);
 
-//         claim.status = 'withdrawn';
-//         await claim.save();
+        if(!item) {
+            return res.status(404).json({
+                message: 'Item not found'
+            });
+        }
 
-//         res.json({ message: 'Claim withdrawn', claim });
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        const canView =
+            isOwner(claim.userId, req.user._id) ||
+            isOwner(item.user, req.user._id) ||
+            isAdmin(req.user);
 
-// const updateClaimStatus = async (req, res) => {
-//     try {
-//         const { status, reviewNote } = req.body;
+        if(!canView) {
+            return res.status(403).json({
+                message: 'Forbidden'
+            });
+        }
 
-//         const allowedStatuses = ['approved', 'rejected'];
+        res.json(claims);
 
-//         if (!allowedStatuses.includes(status)) {
-//             return res.status(400).json({ 
-//                 message: 'Invalid status. Must be approved or rejected' });
-//         }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-//         const claim = await Claim.findById(req.params.id);
+const getItemClaims = async (req, res) => {
+    try {
+        const item = await Item.findById(req.params.id);
 
-//         if (!claim) {
-//             return res.status(404).json({ message: 'Claim not found' });
-//         }
+        if(!item) {
+            return res.status(404).json({
+                message: 'Item not found'
+            });
+        }
 
-//         const item = await Item.foundById(claim.itemId);
+        const canView = 
+            isOwner(item.user, req.user._id) ||
+            isAdmin(req.user);
 
-//         if (!item) {
-//             return res.status(404).json({ message: 'Item not found' });
-//         }
+        if(!canView) {
+            return res.status(403).json({
+                message: 'Forbidden'
+            });
+        }
 
-//         const isOwner = String(item.userId) === String(req.user._id);
-//         const isAdmin = req.user && req.user.role === 'admin';
+        const claim = await Claim.find({ 
+            itemId: req.params.id 
+        })
+            .sort({ createdAt: -1 })
+            .lean();
 
-//         if (!isOwner && !isAdmin) {
-//             return res.status(403).json({ message: 'Forbidden' });
-//         }
+        res.json(claim);
 
-//         claim.status = status;
-//         claim.reviewNote = reviewNote || '';
-//         claim.reviewedAt = new Date()
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
-//         await claim.save();
+const updateClaim = async (req, res) => {
+    try {
+        const claim = await Claim.findById(req.params.id);
 
-//         res.json(claim);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
+        if (!claim) {
+            return res.status(40).json({ 
+                message: 'Claim not found' 
+            });
+        }
 
-// module.exports = {
-//     createClaim, 
-//     getAllClaims, 
-//     getClaimById, 
-//     getItemClaims, 
-//     updateClaim, 
-//     deleteClaim, 
-//     updateClaimStatus
-// };
+        const canEdit =
+            isOwner(claim.userId, req,user._id) ||
+            isAdmin(req.user);
+
+        if (!canEdit) {
+            return res.status(403).json({
+                message: 'Forbidden'
+            });
+        }
+
+        if (claim.status !== 'pending') {
+            return res.status(400).json({
+                message: 'Only pending claims can be updated'
+            });
+        }
+
+        const { proof } = req.body;
+
+        if (typeof proof !== 'string' || !proof.trim()) {
+            return res.status(400).json({
+                message: 'Valid proof is required'
+            });
+        }
+
+        claim.proof = proof.trim();
+
+        await claim.save();
+
+        res.json(claim);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ messge: 'Server error' });
+    }
+};
+
+const deleteClaim = async (req, res) => {
+    try {
+        if(!isAdmin(req.user)) {
+            return res.status(403).json({
+                message: 'Admin access required'
+            });
+        }
+
+        const claim = await Claim.findById(req.params.id);
+
+        if(!claim) {
+            return res.status(404).json({ 
+                message: 'Claim not found'
+             });
+        }
+
+        await claim.deleteOne();
+
+        res.json({
+            message: 'Claim deleted'
+        });
+
+    } catch (err) {
+
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const updateClaimStatus = async (req, res) => {
+    try {
+        const { status, reviewNote } = req.body;
+
+        if(!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({
+                message: 'Satus must be approved'
+            });
+        }
+
+        const claim = await Claim.findById(req.params.id);
+
+        if(!claim) {
+            return res.status(400).json({
+                message: 'Claim not found'
+            });
+        }
+
+        const item = await Item.findById(claim.itemId);
+        
+        if(!item) {
+            return res.status(404).json({
+                message: 'Item not found'
+            });
+        }
+
+        const canReview = 
+            isOwner(item.user, req.user._id) ||
+            isAdmin(req.user);
+        
+        if(!canReview){
+            return res.status(403).json({
+                message: 'Forbidden'
+            });
+        }
+
+        if(claim.status !== 'pending') {
+            return res.status(400).json({
+                message: 'Only pending claims can be reviewed'
+            });
+        }
+
+        if (
+            reviewNote !== undefined && 
+            typeof reviewNote !== 'string'
+        ) {
+            return res.status(400).json({
+                message: 'Review note must be a string'
+            });
+        }
+
+        claim.status = status;
+        claim.reviewNote = reviewNote || '';
+        claim.reviewedAt = new Date()
+
+        await claim.save();
+
+        res.json(claim);
+
+    } catch (err) {
+        
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = {
+    createClaim, 
+    getAllClaims, 
+    getClaimById, 
+    getItemClaims, 
+    updateClaim, 
+    deleteClaim, 
+    updateClaimStatus
+};

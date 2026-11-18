@@ -1,5 +1,5 @@
-/*const express = require('express');
-const passport = require('../config/passport');
+const express = require('express');
+const passport = require('passport');
 const { ensureAuth } = require('../middleware/auth');
 const router = express.Router();
 
@@ -20,4 +20,4 @@ router.get('/github/callback',
     }
 );
 
-module.exports = router;*/
+module.exports = router;

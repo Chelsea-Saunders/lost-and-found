@@ -1,11 +1,10 @@
 const mongoose = require("mongoose");
 
-const ClaimSchema = new mongoose.Schema(
-  {
-    itemId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Item",
-      required: true,
+const ClaimSchema = new mongoose.Schema({
+    postId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post', 
+        required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -13,14 +12,16 @@ const ClaimSchema = new mongoose.Schema(
       required: true,
     },
     proof: {
-      type: String,
-      required: true,
-      trim: true,
+        type: String, 
+        required: true,
+        trim: true,
+        minlength: 10,
+        maxlength: 1000
     },
     status: {
-      type: String,
-      enum: ["pending", "approved", "rejected", "withdrawn"],
-      default: "pending",
+        type: String, 
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
     },
 
     reviewNote: {
