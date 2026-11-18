@@ -1,5 +1,6 @@
 const express = require("express");
 const passport = require("../config/passport");
+const { ensureAuth } = require("../middleware/auth");
 const router = express.Router();
 
 // GOOGLE ROUTES
@@ -65,5 +66,4 @@ router.get(
     res.redirect("/auth/me");
   },
 );
-
 module.exports = router;

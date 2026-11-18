@@ -1,7 +1,7 @@
-// const Joi = require('joi');
+const Joi = require('joi');
 
-// const messageSchema = Joi.object({
-//     content: Joi.string().required(),
-// });
+const messageSchema = Joi.object({
+    content: Joi.string().required(),
+});
 
-// module.exports = { messageSchema };
+module.exports = { messageSchema };
