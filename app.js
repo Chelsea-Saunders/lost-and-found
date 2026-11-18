@@ -1,15 +1,16 @@
 const express = require("express");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const storeClass = MongoStore.default || MongoStore;
+const sessionConfig = require("./src/config/session");
 const swaggerui = require("swagger-ui-express");
 
 const swaggerDocument = require("./swagger-output.json");
-//const passport = require('./src/config/passport');
+const passport = require("./src/config/passport");
 const routes = require("./src/routes");
+const authRoutes = require("./src/routes/authRoutes");
 const cors = require("cors");
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 // BODY PARSERS
 app.use(express.json());
@@ -25,26 +26,19 @@ app.use(
 );
 
 // SESSION SETUP
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: storeClass.create({
-      mongoUrl: process.env.MONGODB_URI,
-    }),
-  }),
-);
+app.use(sessionConfig);
 
 //PASSPORT MIDDLEWARE
-//app.use(passport.initialize());
-//app.use(passport.session());
+app.use(passport.initialize());
+app.use(passport.session());
 
+//Authentication Routes
+app.use("/", authRoutes);
 // SWAGGER
 app.use("/api-docs", swaggerui.serve, swaggerui.setup(swaggerDocument));
 
 // Routes
-// app.use("/", routes);
+app.use("/", routes);
 
 // 404 ERROR HANDLER
 app.use((req, res, next) => {
