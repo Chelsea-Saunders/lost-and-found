@@ -5,14 +5,14 @@ const authRoutes = require("./authRoutes");
 const userRoutes = require("./userRoutes");
 const claimRoutes = require("./claimRoutes");
 const adminRoutes = require("./adminRoutes");
-const itemRoutes = require("./postRoutes");
+const postRoutes = require("./postRoutes");
 const messageRoutes = require("./messageRoutes");
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/claims", claimRoutes);
 router.use("/admin", adminRoutes);
-router.use("/item", itemRoutes);
+router.use("/post", postRoutes);
 router.use("/messages", messageRoutes);
 
 module.exports = router;

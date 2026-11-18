@@ -1,6 +1,5 @@
-
-const { validateRequest } = require('./validateRequest');
-const { claimSchema } = require('../Vlaidators/claimSchemas');
+const { validateRequest } = require("./validateRequest");
+const { claimSchema } = require("../validators/claimSchemas");
 
 const validateClaim = validateRequest(claimSchema);
 

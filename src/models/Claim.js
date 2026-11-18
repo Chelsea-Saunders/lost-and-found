@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 
-const ClaimSchema = new mongoose.Schema({
+const ClaimSchema = new mongoose.Schema(
+  {
     postId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Post', 
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+      required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,16 +13,16 @@ const ClaimSchema = new mongoose.Schema({
       required: true,
     },
     proof: {
-        type: String, 
-        required: true,
-        trim: true,
-        minlength: 10,
-        maxlength: 1000
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 10,
+      maxlength: 1000,
     },
     status: {
-        type: String, 
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
     },
 
     reviewNote: {
@@ -44,6 +45,6 @@ const ClaimSchema = new mongoose.Schema({
   },
 );
 
-ClaimSchema.index({ itemId: 1, userId: 1 }, { unique: true });
+ClaimSchema.index({ postId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Claim", ClaimSchema);
