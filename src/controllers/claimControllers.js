@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const Claim = require("../models/Claim");
 const Post = require("../models/Post");
-
 const isAdmin = (user) => user?.role === "admin";
 
 const isOwner = (ownerId, userId) => String(ownerId) === String(userId);
@@ -9,6 +8,9 @@ const isOwner = (ownerId, userId) => String(ownerId) === String(userId);
 // create claim
 const createClaim = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "Invalid post ID" });
+
     const postItem = await Post.findById(req.params.id);
 
     if (!postItem) {
@@ -24,18 +26,10 @@ const createClaim = async (req, res) => {
       });
     }
 
-    const claim = await Claim.create({
+    const newClaim = await Claim.create({
       postId: postItem._id,
       userId: req.user._id,
       proof: req.body.proof,
-    });
-
-    res.status(201).json({ message: "Claim submitted successfully", claim });
-
-    const newClaim = await Claim.create({
-      postId,
-      userId: req.user._id,
-      proof,
     });
 
     res.status(201).json({
@@ -43,6 +37,8 @@ const createClaim = async (req, res) => {
       claim: newClaim,
     });
   } catch (err) {
+    if (err.code === 11000)
+      return res.status(409).json({ message: "You already claimed this post" });
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
@@ -69,19 +65,19 @@ const getAllClaims = async (req, res) => {
 
 const getClaimById = async (req, res) => {
   try {
-    const claims = await Claim.findById(req.params.id);
+    const claim = await Claim.findById(req.params.id);
 
-    if (!claims) {
+    if (!claim) {
       return res.status(404).json({
         message: "Claim not found",
       });
     }
 
-    const post = await post.findById(claims.postId);
+    const post = await Post.findById(claim.postId);
 
-    if (!item) {
+    if (!post) {
       return res.status(404).json({
-        message: "Item not found",
+        message: "Post not found",
       });
     }
 
@@ -96,7 +92,7 @@ const getClaimById = async (req, res) => {
       });
     }
 
-    res.json(claims);
+    res.json(claim);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -109,7 +105,7 @@ const getPostClaims = async (req, res) => {
 
     if (!post) {
       return res.status(404).json({
-        message: "Item not found",
+        message: "Post not found",
       });
     }
 
@@ -121,13 +117,13 @@ const getPostClaims = async (req, res) => {
       });
     }
 
-    const claim = await Claim.find({
+    const claims = await Claim.find({
       postId: req.params.id,
     })
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json(claim);
+    res.json(claims);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -139,12 +135,12 @@ const updateClaim = async (req, res) => {
     const claim = await Claim.findById(req.params.id);
 
     if (!claim) {
-      return res.status(40).json({
+      return res.status(404).json({
         message: "Claim not found",
       });
     }
 
-    const canEdit = isOwner(claim.userId, req, user._id) || isAdmin(req.user);
+    const canEdit = isOwner(claim.userId, req.user._id) || isAdmin(req.user);
 
     if (!canEdit) {
       return res.status(403).json({
@@ -173,25 +169,16 @@ const updateClaim = async (req, res) => {
     res.json(claim);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ messge: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 const deleteClaim = async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({
-        message: "Admin access required",
-      });
-    }
-
     const claim = await Claim.findById(req.params.id);
-
-    if (!claim) {
-      return res.status(404).json({
-        message: "Claim not found",
-      });
-    }
+    if (!claim) return res.status(404).json({ message: "Claim not found" });
+    const canDelete = isOwner(claim.userId, req.user._id) || isAdmin(req.user);
+    if (!canDelete) return res.status(403).json({ message: "Forbidden" });
 
     await claim.deleteOne();
 
@@ -210,14 +197,14 @@ const updateClaimStatus = async (req, res) => {
 
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json({
-        message: "Status must be approved",
+        message: "Status must be approved or rejected",
       });
     }
 
     const claim = await Claim.findById(req.params.id);
 
     if (!claim) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: "Claim not found",
       });
     }
@@ -253,6 +240,7 @@ const updateClaimStatus = async (req, res) => {
     claim.status = status;
     claim.reviewNote = reviewNote || "";
     claim.reviewedAt = new Date();
+    claim.reviewedBy = req.user._id;
 
     await claim.save();
 
