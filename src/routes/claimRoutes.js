@@ -1,36 +1,23 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const { ensureAuth, ensureAdmin } = require('../middleware/auth');
-const { ensureClaimOwner } = require('../middleware/ensureClaimOwner');
-const { ensurePostOwnerOrAdmin } = require('../middleware/ensurePostOwnerOrAdmin');
+const { ensureAuth, ensureAdmin } = require("../middleware/auth");
+const {
+  validateClaim,
+  validateClaimStatus,
+} = require("../middleware/validateClaim");
 
-const claimController = require('../controllers/claimControllers');
+const claimController = require("../controllers/claimControllers");
 
-router.get(
-    '/', 
-    ensureAuth, 
-    ensureAdmin,
-    claimController.getAllClaims);
-router.get(
-    '/:id', 
-    ensureAuth, 
-    claimController.getClaimById);
-router.put(
-    '/:id', 
-    ensureAuth, 
-    ensureClaimOwner, 
-    claimController.updateClaim);
-router.delete(
-    '/:id', 
-    ensureAuth, 
-    ensureAdmin,
-    ensureClaimOwner, 
-    claimController.deleteClaim);
+router.get("/", ensureAuth, ensureAdmin, claimController.getAllClaims);
+router.get("/:id", ensureAuth, claimController.getClaimById);
+router.put("/:id", ensureAuth, validateClaim, claimController.updateClaim);
+router.delete("/:id", ensureAuth, claimController.deleteClaim);
 router.patch(
-    '/:id/status', 
-    ensureAuth, 
-    ensurePostOwnerOrAdmin, 
-    claimController.updateClaimStatus);
+  "/:id/status",
+  ensureAuth,
+  validateClaimStatus,
+  claimController.updateClaimStatus,
+);
 
 module.exports = router;
