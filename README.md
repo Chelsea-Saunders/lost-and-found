@@ -141,23 +141,33 @@ All endpoints will include input validation, error handling, and appropriate aut
 
 
 
-## things you will need to add to your personal .env:
-GITHUB_CLIENT_ID=<your_client_id>
-GITHUB_CLIENT_SECRET=<your_client_secret>
-GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+## Local environment
 
+Use Node.js 26.13.0, as specified in `.node-version`. Keep credentials in your
+local `.env`, which is ignored by Git:
+
+```dotenv
+MONGODB_URI=<existing_mongodb_connection_string_with_the_lost-and-found_database>
 SESSION_SECRET=<a_long_random_string>
-
 PORT=3000
-MONGODB_URI=<your_uri>
 
-GOOGLE_CLIENT_ID=<Your_google_client_id(found_on_google_cloud_console)>
-GOOGLE_CLIENT_SECRET=<a_long_random_string>
-GOOGLE_CALLBACK=http://localhost:3000/auth/google/callback
+# Configure all three values for each provider you want to enable.
+GOOGLE_CLIENT_ID=<your_google_client_id>
+GOOGLE_CLIENT_SECRET=<your_google_client_secret>
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 
-GITHUB_CLIENT_ID=<input_your_client_id>
-GITHUB_CLIENT_SECRET=<a_long_random_string>
+# GitHub is optional.
+GITHUB_CLIENT_ID=<your_github_client_id>
+GITHUB_CLIENT_SECRET=<your_github_client_secret>
 GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+```
+
+The application reads `GOOGLE_CALLBACK_URL`, including the `_URL` suffix.
+OAuth providers are registered only when all three of their settings are present.
+MongoDB and `SESSION_SECRET` are required even when OAuth is not configured.
+
+Run `npm ci`, `npm run swagger`, and `npm start`. Open `/` for navigation or
+`/api-docs/` for the 19 collection operations. Swagger uses the current API origin.
 
 ## CREATING A GITHUB BRANCH, PULLING AND PUSHING REMINDER
 git checkout -b feature /name-of-new-branch. // create the branch

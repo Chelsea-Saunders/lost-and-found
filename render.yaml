@@ -1,0 +1,19 @@
+# The service uses the repository and branch selected when creating the Blueprint.
+services:
+  - type: web
+    name: lost-and-found-api
+    runtime: node
+    plan: free
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --omit=dev && npm run swagger
+    startCommand: npm start
+    healthCheckPath: /api-docs/
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+    # Add Google/GitHub credentials and HTTPS callback URLs in the Render
+    # dashboard once the service URL is assigned. See README.md.
