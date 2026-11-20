@@ -37,7 +37,6 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "swagger-autogen": "^2.23.7"
+    "nodemon": "^3.1.14"
   }
 }

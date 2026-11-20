@@ -1,14 +1,2069 @@
 {
-  "swagger": "2.0",
+  "openapi": "3.0.3",
   "info": {
-    "title": "My API",
-    "description": "Lost and Found API",
-    "version": "1.0.0"
+    "title": "Lost and Found API",
+    "version": "1.0.0",
+    "description": "API reference for 19 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests."
   },
-  "host": "localhost:3000",
-  "basePath": "/",
-  "schemes": [
-    "https"
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current API origin"
+    }
   ],
-  "paths": {}
+  "tags": [
+    {
+      "name": "Posts",
+      "description": "Browse lost and found posts. Create and manage your own posts."
+    },
+    {
+      "name": "Users",
+      "description": "User profiles and administrator role changes."
+    },
+    {
+      "name": "Claims",
+      "description": "Submit private ownership proof and review recovery requests."
+    },
+    {
+      "name": "Messages",
+      "description": "Private conversations associated with an ownership claim."
+    }
+  ],
+  "paths": {
+    "/post": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "listPosts",
+        "summary": "List lost and found posts",
+        "description": "Returns all posts, newest first. Available to everyone. Filtering and pagination are not supported.",
+        "responses": {
+          "200": {
+            "description": "All posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                },
+                "example": [
+                  {
+                    "_id": "507f1f77bcf86cd799439011",
+                    "user": "507f1f77bcf86cd799439012",
+                    "title": "Found a silver ring",
+                    "content": "Found near the library entrance. Contact me with identifying details.",
+                    "category": "jewelry",
+                    "status": "found",
+                    "createdAt": "2026-11-19T15:00:00.000Z",
+                    "updatedAt": "2026-11-19T15:00:00.000Z",
+                    "__v": 0
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "createPost",
+        "summary": "Create a post",
+        "description": "Creates a post owned by the signed-in user. Title and content must contain non-whitespace text. Category defaults to other; status defaults to lost. New posts may be lost or found, never returned.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePost"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439011",
+                  "user": "507f1f77bcf86cd799439012",
+                  "title": "Found a silver ring",
+                  "content": "Found near the library entrance. Contact me with identifying details.",
+                  "category": "jewelry",
+                  "status": "found",
+                  "createdAt": "2026-11-19T15:00:00.000Z",
+                  "updatedAt": "2026-11-19T15:00:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid title, content, category, or status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingFields": {
+                    "value": {
+                      "message": "Title and content are required"
+                    }
+                  },
+                  "invalidCategory": {
+                    "value": {
+                      "message": "Invalid category"
+                    }
+                  },
+                  "invalidStatus": {
+                    "value": {
+                      "message": "Status must be lost or found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/post/{id}": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "getPost",
+        "summary": "Get a post",
+        "description": "Returns a single post. Available to everyone. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439011",
+                  "user": "507f1f77bcf86cd799439012",
+                  "title": "Found a silver ring",
+                  "content": "Found near the library entrance. Contact me with identifying details.",
+                  "category": "jewelry",
+                  "status": "found",
+                  "createdAt": "2026-11-19T15:00:00.000Z",
+                  "updatedAt": "2026-11-19T15:00:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "updatePost",
+        "summary": "Update your post",
+        "description": "Owner only; administrators do not bypass ownership checks. Submit only fields to change. **Current limitation:** changes are not persisted. Supplying a recognized update field currently returns 500; an empty JSON object returns 200 with an empty body. A category-only update is also incorrectly rejected with 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePost"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Empty response when an empty JSON object is submitted. No changes are saved by the current handler."
+          },
+          "400": {
+            "description": "Invalid post ID or update fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid status"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The current user does not own the post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: This is not your post."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "deletePost",
+        "summary": "Delete your post",
+        "description": "Owner only. **Current limitation:** a conflicting ownership check rejects requests from the post owner with 403, so deletion does not currently complete.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid post ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "invalid post ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Ownership check rejected the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/post/{id}/status": {
+      "patch": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "updatePostStatus",
+        "summary": "Update your post's status",
+        "description": "Owner only. **Current limitation:** the handler accepts open, pending, closed, or archived, which conflict with the Post model's lost, found, or returned values. Accepted values currently return 500. The request schema reflects the current handler; no successful status change is currently available.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePostStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid post ID or status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid status. Must be one of: open, pending, closed, archived"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The current user does not own the post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: This is not your post."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "listUsers",
+        "summary": "List user profiles",
+        "description": "Administrator only. Returns public profile fields, sorted by createdAt descending. Provider identifiers are excluded. createdAt may be absent because the User model does not currently generate timestamps.",
+        "responses": {
+          "200": {
+            "description": "User profiles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                },
+                "example": [
+                  {
+                    "_id": "507f1f77bcf86cd799439012",
+                    "name": "Alex Rivera",
+                    "email": "alex@example.com",
+                    "role": "user"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: Admins only"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "getUser",
+        "summary": "Get a user profile",
+        "description": "Users may read their own profile; administrators may read any profile. Returns public profile fields without OAuth provider identifiers.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the user profile to retrieve.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439012"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439012",
+                  "name": "Alex Rivera",
+                  "email": "alex@example.com",
+                  "role": "user"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid user ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid user ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The caller is neither this user nor an administrator.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/users/{id}/role": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "updateUserRole",
+        "summary": "Change a user's role",
+        "description": "Administrator only. Accepts user or admin. **Current limitation:** valid update requests currently fail with 500 before the target user is loaded. Role changes and the final-administrator safeguard are not currently operational.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the user whose role should change.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439012"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRole"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid user ID or role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Role must be user or admin"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: Admins only"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/post/{id}/claims": {
+      "get": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "listPostClaims",
+        "summary": "List claims for a post",
+        "description": "Post owner or administrator only. Returns private ownership claims, newest first. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post whose claims are requested.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claims for the post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Claim"
+                  }
+                },
+                "example": [
+                  {
+                    "_id": "507f1f77bcf86cd799439013",
+                    "postId": "507f1f77bcf86cd799439011",
+                    "userId": "507f1f77bcf86cd799439014",
+                    "proof": "The inside of the ring has my initials engraved next to a small star.",
+                    "status": "pending",
+                    "reviewNote": "",
+                    "reviewedAt": null,
+                    "reviewedBy": null,
+                    "createdAt": "2026-11-19T15:05:00.000Z",
+                    "updatedAt": "2026-11-19T15:05:00.000Z",
+                    "__v": 0
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Only the post owner or an administrator may view these claims.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "createClaim",
+        "summary": "Submit an ownership claim",
+        "description": "Signed-in users may claim another user's post once. Proof is private and must contain 10–1,000 characters after trimming. The current handler permits claims on posts of any status.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the post being claimed.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteClaim"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Claim submitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateClaimResponse"
+                },
+                "example": {
+                  "message": "Claim submitted successfully",
+                  "claim": {
+                    "_id": "507f1f77bcf86cd799439013",
+                    "postId": "507f1f77bcf86cd799439011",
+                    "userId": "507f1f77bcf86cd799439014",
+                    "proof": "The inside of the ring has my initials engraved next to a small star.",
+                    "status": "pending",
+                    "reviewNote": "",
+                    "reviewedAt": null,
+                    "reviewedBy": null,
+                    "createdAt": "2026-11-19T15:05:00.000Z",
+                    "updatedAt": "2026-11-19T15:05:00.000Z",
+                    "__v": 0
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The post ID or ownership proof is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidPostId": {
+                    "value": {
+                      "message": "Invalid post ID"
+                    }
+                  },
+                  "invalidProof": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"proof\" length must be at least 10 characters long"
+                      ]
+                    }
+                  },
+                  "missingProof": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"proof\" is required"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "You cannot claim your own post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Cannot claim your own post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Post not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This user already claimed this post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "You already claimed this post"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/claims": {
+      "get": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "listClaims",
+        "summary": "List all claims",
+        "description": "Administrator only. Returns all ownership claims, newest first, including private proof and review details.",
+        "responses": {
+          "200": {
+            "description": "All claims.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Claim"
+                  }
+                },
+                "example": [
+                  {
+                    "_id": "507f1f77bcf86cd799439013",
+                    "postId": "507f1f77bcf86cd799439011",
+                    "userId": "507f1f77bcf86cd799439014",
+                    "proof": "The inside of the ring has my initials engraved next to a small star.",
+                    "status": "pending",
+                    "reviewNote": "",
+                    "reviewedAt": null,
+                    "reviewedBy": null,
+                    "createdAt": "2026-11-19T15:05:00.000Z",
+                    "updatedAt": "2026-11-19T15:05:00.000Z",
+                    "__v": 0
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: Admins only"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/claims/{id}": {
+      "get": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "getClaim",
+        "summary": "Get a private claim",
+        "description": "Claimant, post owner, or administrator only. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the ownership claim.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Claim"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439013",
+                  "postId": "507f1f77bcf86cd799439011",
+                  "userId": "507f1f77bcf86cd799439014",
+                  "proof": "The inside of the ring has my initials engraved next to a small star.",
+                  "status": "pending",
+                  "reviewNote": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "createdAt": "2026-11-19T15:05:00.000Z",
+                  "updatedAt": "2026-11-19T15:05:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The caller cannot access this claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Claim or associated post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "updateClaim",
+        "summary": "Update proof on a pending claim",
+        "description": "Claimant or administrator only. Only pending claims can be edited. Proof must contain 10–1,000 characters after trimming. Unknown request fields are rejected. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the claim whose proof should change.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteClaim"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Claim"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439013",
+                  "postId": "507f1f77bcf86cd799439011",
+                  "userId": "507f1f77bcf86cd799439014",
+                  "proof": "The inside of the ring has my initials engraved next to a small star.",
+                  "status": "pending",
+                  "reviewNote": "",
+                  "reviewedAt": null,
+                  "reviewedBy": null,
+                  "createdAt": "2026-11-19T15:05:00.000Z",
+                  "updatedAt": "2026-11-19T15:05:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ownership proof or a claim that is no longer pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidProof": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"proof\" length must be at least 10 characters long"
+                      ]
+                    }
+                  },
+                  "claimNotPending": {
+                    "value": {
+                      "message": "Only pending claims can be updated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The caller is neither the claimant nor an administrator.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Claim not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "deleteClaim",
+        "summary": "Delete a claim",
+        "description": "Claimant or administrator only. Permanently deletes the claim rather than marking it withdrawn. Any claim status may be deleted; associated messages are not automatically removed. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the claim to delete.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                },
+                "example": {
+                  "message": "Claim deleted"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The caller is neither the claimant nor an administrator.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Claim not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/claims/{id}/status": {
+      "patch": {
+        "tags": [
+          "Claims"
+        ],
+        "operationId": "reviewClaim",
+        "summary": "Approve or reject a pending claim",
+        "description": "Post owner or administrator only. Only pending claims may be reviewed. Records the reviewer and review time. Approval does not change the post status. An optional review note must contain 1–1,000 characters after trimming; omit it for no note. Unknown fields are rejected. A malformed ID currently produces 500 rather than 400.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the claim to approve or reject.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewClaim"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reviewed claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Claim"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439013",
+                  "postId": "507f1f77bcf86cd799439011",
+                  "userId": "507f1f77bcf86cd799439014",
+                  "proof": "The inside of the ring has my initials engraved next to a small star.",
+                  "status": "approved",
+                  "reviewNote": "Ownership confirmed.",
+                  "reviewedAt": "2026-11-19T15:15:00.000Z",
+                  "reviewedBy": "507f1f77bcf86cd799439012",
+                  "createdAt": "2026-11-19T15:05:00.000Z",
+                  "updatedAt": "2026-11-19T15:15:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid decision, invalid review note, or a claim that is no longer pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidDecision": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"status\" must be one of [approved, rejected]"
+                      ]
+                    }
+                  },
+                  "invalidReviewNote": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"reviewNote\" is not allowed to be empty"
+                      ]
+                    }
+                  },
+                  "claimNotPending": {
+                    "value": {
+                      "message": "Only pending claims can be reviewed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Only the post owner or an administrator may review this claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Claim or associated post not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/messages/claim/{claimId}": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "operationId": "listClaimMessages",
+        "summary": "List a claim's messages",
+        "description": "Intended for the claimant and post owner. Returns up to 100 messages, oldest first, without pagination. **Current limitation:** the participant check is not awaited and can cause an unhandled rejection. This endpoint cannot currently enforce private conversation access reliably.",
+        "parameters": [
+          {
+            "name": "claimId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the claim associated with the conversation.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim messages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  }
+                },
+                "example": [
+                  {
+                    "_id": "507f1f77bcf86cd799439015",
+                    "claimId": "507f1f77bcf86cd799439013",
+                    "senderId": "507f1f77bcf86cd799439014",
+                    "content": "I can provide a photo of the engraving to confirm ownership.",
+                    "readAt": null,
+                    "createdAt": "2026-11-19T15:10:00.000Z",
+                    "updatedAt": "2026-11-19T15:10:00.000Z",
+                    "__v": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid claim ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid claim Id"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Claim not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "operationId": "createMessage",
+        "summary": "Send a message about a claim",
+        "description": "Intended for the claimant and post owner. Content must contain non-whitespace text; its raw length cannot exceed 5,000 characters. The sender comes from the session. **Current limitation:** the participant check fails with 500 for existing claims, so messages cannot currently be created.",
+        "parameters": [
+          {
+            "name": "claimId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the claim associated with the conversation.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439013"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid claim ID, missing claim, or invalid content. A missing claim currently returns 400 rather than 404.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidClaimId": {
+                    "value": {
+                      "message": "Invalid claim Id"
+                    }
+                  },
+                  "claimNotFound": {
+                    "value": {
+                      "message": "Claim not found"
+                    }
+                  },
+                  "invalidContent": {
+                    "value": {
+                      "message": "Message must contain 1-5000 characters"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/messages/{messageId}/read": {
+      "patch": {
+        "tags": [
+          "Messages"
+        ],
+        "operationId": "markMessageRead",
+        "summary": "Mark a received message as read",
+        "description": "Intended for a conversation participant other than the sender. No request body is needed. **Current limitation:** the participant check fails with 500 for existing claims, so read receipts cannot currently be updated. A missing associated claim returns 403.",
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the message to mark as read.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439015"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid message ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid message ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The message's associated claim was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Access denied"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Message not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Unauthorized": {
+        "description": "An authenticated session is required.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "Not logged in"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Unexpected server or database error. Controller errors use message; the global handler uses error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "$ref": "#/components/schemas/GlobalError"
+                }
+              ]
+            },
+            "example": {
+              "message": "Server error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ObjectId": {
+        "type": "string",
+        "pattern": "^[a-fA-F0-9]{24}$",
+        "description": "A 24-character hexadecimal MongoDB ObjectId.",
+        "example": "507f1f77bcf86cd799439011"
+      },
+      "MessageResponse": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Result of the completed operation.",
+            "example": "Claim deleted"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Explanation of the failure.",
+            "example": "Server error"
+          },
+          "errors": {
+            "type": "array",
+            "description": "Field validation details, when present.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GlobalError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Internal Server Error"
+          }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "required": [
+          "_id",
+          "user",
+          "title",
+          "content",
+          "category",
+          "status"
+        ],
+        "properties": {
+          "_id": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Post title. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found a silver ring"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Item description and recovery details. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found near the library entrance. Contact me with identifying details."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "jewelry",
+              "household",
+              "pet",
+              "clothing",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "lost",
+              "found",
+              "returned"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "__v": {
+            "type": "integer",
+            "readOnly": true,
+            "example": 0
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439011",
+          "user": "507f1f77bcf86cd799439012",
+          "title": "Found a silver ring",
+          "content": "Found near the library entrance. Contact me with identifying details.",
+          "category": "jewelry",
+          "status": "found",
+          "createdAt": "2026-11-19T15:00:00.000Z",
+          "updatedAt": "2026-11-19T15:00:00.000Z",
+          "__v": 0
+        }
+      },
+      "CreatePost": {
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Post title. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found a silver ring"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Item description and recovery details. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found near the library entrance. Contact me with identifying details."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "jewelry",
+              "household",
+              "pet",
+              "clothing",
+              "other"
+            ],
+            "default": "other"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "lost",
+              "found"
+            ],
+            "default": "lost"
+          }
+        },
+        "description": "The server assigns the owner. Only title, content, category, and status are used; other input fields are ignored.",
+        "example": {
+          "title": "Found a silver ring",
+          "content": "Found near the library entrance. Contact me with identifying details.",
+          "category": "jewelry",
+          "status": "found"
+        }
+      },
+      "UpdatePost": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Post title. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found a silver ring"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Item description and recovery details. Whitespace-only values are rejected; saved values are trimmed.",
+            "example": "Found near the library entrance. Contact me with identifying details."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "jewelry",
+              "household",
+              "pet",
+              "clothing",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "lost",
+              "found",
+              "returned"
+            ]
+          }
+        },
+        "description": "All fields are optional. See the operation's current persistence and validation limitations before sending an update.",
+        "example": {
+          "title": "Silver ring returned to its owner",
+          "status": "returned"
+        }
+      },
+      "UpdatePostStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "closed",
+              "archived"
+            ]
+          }
+        },
+        "description": "Current handler values conflict with the Post status enum; see the operation's implementation note.",
+        "example": {
+          "status": "closed"
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "_id",
+          "name",
+          "role"
+        ],
+        "properties": {
+          "_id": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "name": {
+            "type": "string",
+            "description": "User's display name."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true,
+            "description": "Email address, when available."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "description": "Public profile fields selected by /users endpoints. createdAt may be absent because automatic timestamps are not enabled on the User model.",
+        "example": {
+          "_id": "507f1f77bcf86cd799439012",
+          "name": "Alex Rivera",
+          "email": "alex@example.com",
+          "role": "user"
+        }
+      },
+      "UpdateRole": {
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ],
+            "description": "Requested application role."
+          }
+        },
+        "example": {
+          "role": "user"
+        }
+      },
+      "Claim": {
+        "type": "object",
+        "required": [
+          "_id",
+          "postId",
+          "userId",
+          "proof",
+          "status"
+        ],
+        "properties": {
+          "_id": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "postId": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "userId": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "proof": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "description": "Private evidence of ownership."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "default": "pending"
+          },
+          "reviewNote": {
+            "type": "string",
+            "default": ""
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
+          },
+          "reviewedBy": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "nullable": true,
+            "readOnly": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "__v": {
+            "type": "integer",
+            "readOnly": true,
+            "example": 0
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439013",
+          "postId": "507f1f77bcf86cd799439011",
+          "userId": "507f1f77bcf86cd799439014",
+          "proof": "The inside of the ring has my initials engraved next to a small star.",
+          "status": "pending",
+          "reviewNote": "",
+          "reviewedAt": null,
+          "reviewedBy": null,
+          "createdAt": "2026-11-19T15:05:00.000Z",
+          "updatedAt": "2026-11-19T15:05:00.000Z",
+          "__v": 0
+        }
+      },
+      "WriteClaim": {
+        "type": "object",
+        "required": [
+          "proof"
+        ],
+        "properties": {
+          "proof": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "description": "Private ownership evidence. Length is checked after trimming whitespace."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Proof is validated after trimming whitespace. Unknown fields are rejected.",
+        "example": {
+          "proof": "The inside of the ring has my initials engraved next to a small star."
+        }
+      },
+      "ReviewClaim": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Decision on a pending claim."
+          },
+          "reviewNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Optional private decision note. Omit rather than sending an empty string."
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "status": "approved",
+          "reviewNote": "Ownership confirmed by the engraving."
+        }
+      },
+      "CreateClaimResponse": {
+        "type": "object",
+        "required": [
+          "message",
+          "claim"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "claim": {
+            "$ref": "#/components/schemas/Claim"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "_id",
+          "claimId",
+          "senderId",
+          "content"
+        ],
+        "properties": {
+          "_id": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "claimId": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/ObjectId"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "__v": {
+            "type": "integer",
+            "readOnly": true,
+            "example": 0
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439015",
+          "claimId": "507f1f77bcf86cd799439013",
+          "senderId": "507f1f77bcf86cd799439014",
+          "content": "I can provide a photo of the engraving to confirm ownership.",
+          "readAt": null,
+          "createdAt": "2026-11-19T15:10:00.000Z",
+          "updatedAt": "2026-11-19T15:10:00.000Z",
+          "__v": 0
+        }
+      },
+      "CreateMessage": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "pattern": "\\S",
+            "description": "Message text. Whitespace-only values are rejected."
+          }
+        },
+        "description": "Must contain non-whitespace text. The length limit applies before trimming.",
+        "example": {
+          "content": "I can provide a photo of the engraving to confirm ownership."
+        }
+      }
+    }
+  }
 }

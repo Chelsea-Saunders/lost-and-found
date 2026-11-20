@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("node:path");
 const sessionConfig = require("./src/config/session");
 const swaggerui = require("swagger-ui-express");
 
@@ -31,6 +32,11 @@ app.use(sessionConfig);
 //PASSPORT MIDDLEWARE
 app.use(passport.initialize());
 app.use(passport.session());
+
+// API navigation and provider selection
+app.get(["/", "/login"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 //Authentication Routes
 app.use("/", authRoutes);
