@@ -28,6 +28,7 @@
     "express-session": "^1.19.0",
     "express-validator": "^7.3.2",
     "graphql": "^16.15.0",
+    "joi": "^18.3.2",
     "mongoose": "^9.12.0",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
@@ -36,7 +37,6 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "swagger-autogen": "^2.23.7"
+    "nodemon": "^3.1.14"
   }
 }

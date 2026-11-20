@@ -18,70 +18,83 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Google OAuth
-passport.use(
-  new Google(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      scope: ["openid", "email", "profile"],
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ googleId: profile.id });
+if (
+  process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_SECRET &&
+  process.env.GOOGLE_CALLBACK_URL
+) {
+  passport.use(
+    new Google(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        scope: ["openid", "email", "profile"],
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          let user = await User.findOne({ googleId: profile.id });
 
-        if (!user) {
-          const primaryEmail =
-            profile.emails && profile.emails[0]
-              ? profile.emails[0].value
-              : null;
+          if (!user) {
+            const primaryEmail =
+              profile.emails && profile.emails[0]
+                ? profile.emails[0].value
+                : null;
 
-          user = await User.create({
-            googleId: profile.id,
-            name: profile.displayName || profile.username,
-            email: primaryEmail,
-            avatar:
-              profile.photos?.[0]?.value || profile._json?.avatar_url || null,
-          });
+            user = await User.create({
+              googleId: profile.id,
+              name: profile.displayName || profile.username,
+              email: primaryEmail,
+              avatar:
+                profile.photos?.[0]?.value || profile._json?.avatar_url || null,
+            });
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err);
         }
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    },
-  ),
-);
+      },
+    ),
+  );
+}
 
 // GitHub OAuth
-passport.use(
-  new Github(
-    {
-      clientID: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: process.env.GITHUB_CALLBACK_URL,
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ githubId: profile.id });
+if (
+  process.env.GITHUB_CLIENT_ID &&
+  process.env.GITHUB_CLIENT_SECRET &&
+  process.env.GITHUB_CALLBACK_URL
+) {
+  passport.use(
+    new Github(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: process.env.GITHUB_CALLBACK_URL,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          let user = await User.findOne({ githubId: profile.id });
 
-        if (!user) {
-          const primaryEmail =
-            profile.emails && profile.emails[0]
-              ? profile.emails[0].value
-              : null;
+          if (!user) {
+            const primaryEmail =
+              profile.emails && profile.emails[0]
+                ? profile.emails[0].value
+                : null;
 
-          user = await User.create({
-            githubId: profile.id,
-            name: profile.displayName || profile.username,
-            email: primaryEmail,
-            avatar: profile.photos?.[0]?.value || null,
-          });
+            user = await User.create({
+              githubId: profile.id,
+              name: profile.displayName || profile.username,
+              email: primaryEmail,
+              avatar: profile.photos?.[0]?.value || null,
+            });
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err);
         }
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    },
-  ),
-);
+      },
+    ),
+  );
+}
+
 module.exports = passport;
