@@ -34,6 +34,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // API navigation and provider selection
+app.get("/style.css", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "style.css"));
+});
+
 app.get(["/", "/login"], (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
