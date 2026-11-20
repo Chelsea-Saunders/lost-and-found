@@ -5,9 +5,9 @@ const User = require("../models/User");
 
 // Serialization
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user.id.toString());
 });
-
+//Deserialization
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
