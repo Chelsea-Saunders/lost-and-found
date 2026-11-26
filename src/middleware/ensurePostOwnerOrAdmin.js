@@ -33,7 +33,7 @@ const ensurePostOwnerOrAdmin = async (req, res, next) => {
         }
 
         const isPostOwner = 
-            String(post.user) === String(req.user._id);
+            String(post.userId) === String(req.user._id);
 
         const isAdmin = req.user.role === 'Admin';
 

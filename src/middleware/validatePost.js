@@ -8,7 +8,7 @@ const validCategories = [
     'other'
 ];
 
-const validStatuses = ['lost', 'found', 'returned'];
+const validStatuses = ['lost', 'found', 'archived'];
 
 function validateCreatePost(req, res, next) {
     const { title, content, category, status } = req.body;
