@@ -182,3 +182,7 @@ git merge feature/name-of-new-branch     // merge branches
 git push origin main       // push to main github page
 
 git branch -d feature /name-of-new-branch // if you decide to delete branch later
+
+
+## AI Usage for test runners:
+https://chatgpt.com/share/6b07b39a-d690-83e8-9a50-cbbc27a1b998
