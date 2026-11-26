@@ -19,6 +19,12 @@ const createClaim = async (req, res) => {
       });
     }
 
+    if (postItem.status === 'returned') {
+      return res.status(400).json({
+        message: 'Cannot claim a returned item'
+      });
+    }
+
     // check: item owner cannot claim their own item
     if (isOwner(postItem.user, req.user._id)) {
       return res.status(403).json({
@@ -65,6 +71,11 @@ const getAllClaims = async (req, res) => {
 
 const getClaimById = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid claim ID'
+      });
+    }
     const claim = await Claim.findById(req.params.id);
 
     if (!claim) {
@@ -101,6 +112,11 @@ const getClaimById = async (req, res) => {
 
 const getPostClaims = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid post ID'
+      });
+    }
     const post = await Post.findById(req.params.id);
 
     if (!post) {
@@ -132,6 +148,12 @@ const getPostClaims = async (req, res) => {
 
 const updateClaim = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid claim ID'
+      });
+    }
+
     const claim = await Claim.findById(req.params.id);
 
     if (!claim) {
@@ -175,6 +197,11 @@ const updateClaim = async (req, res) => {
 
 const deleteClaim = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid claim ID'
+      });
+    }
     const claim = await Claim.findById(req.params.id);
     if (!claim) return res.status(404).json({ message: "Claim not found" });
     const canDelete = isOwner(claim.userId, req.user._id) || isAdmin(req.user);
@@ -193,6 +220,11 @@ const deleteClaim = async (req, res) => {
 
 const updateClaimStatus = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid claim ID'
+      });
+    }
     const { status, reviewNote } = req.body;
 
     if (!["approved", "rejected"].includes(status)) {

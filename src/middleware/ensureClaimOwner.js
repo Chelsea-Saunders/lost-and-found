@@ -24,7 +24,7 @@ const ensureClaimOwner = async (req, res, next) => {
         }
 
         const isOwner = 
-            String(claim.user) === String(req.user._id);
+            String(claim.userId) === String(req.user._id);
 
         if(!isOwner) {
             return res.status(403).json({

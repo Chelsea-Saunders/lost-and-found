@@ -6,10 +6,12 @@ const Post = require('../models/Post');
 
 // check claim permission
 const canAccessClaim = async (claim, userId) => {
+    const isClaimant = String(claim.userId) === String(userId);
+
     if (isClaimant) {
         return true;
     }
-    const post = await Post.findById(clain.postId);
+    const post = await Post.findById(claim.postId);
 
     if (!post) {
         return false;
@@ -42,7 +44,7 @@ const createMessage = async (req, res) => {
         if(
             typeof content !== 'string' ||
             !content.trim() ||
-            content.length > 5000
+            content.trim().length > 5000
         ) {
             return res.status(400).json({
                 message: 'Message must contain 1-5000 characters'
@@ -51,7 +53,7 @@ const createMessage = async (req, res) => {
         const claim = await Claim.findById(claimId);
 
         if(!claim) {
-            return res.status(400).json({
+            return res.status(404).json({
                 message: 'Claim not found'
             });
         }
@@ -73,7 +75,7 @@ const createMessage = async (req, res) => {
     } catch (err) {
         console.error('Create message error', err);
 
-        if (err.name === 'ValidatorError') {
+        if (err.name === 'ValidationError') {
             return res.status(400).json({
                 message: 'Invalid message data'
             });
@@ -110,7 +112,7 @@ const getMessagesByClaim = async (req, res) => {
             });
         }
 
-        if (!canAccessClaim(claim, userId)) {
+        if (!(await canAccessClaim(claim, userId))) {
             return res.status(403).json({
                 message: 'Access denied'
             });
@@ -164,7 +166,6 @@ const markMessageAsRead = async (req, res) => {
             });
         }
 
-        // sender can mark message as read
         if (message.senderId.toString() === userId.toString()) {
             return res.status(403).json({
                 message: 'Cannot mark your own message as read'
@@ -197,8 +198,26 @@ const markMessageAsRead = async (req, res) => {
      }
 };
 
+// delete message
+const deleteMessage = async (req, res) => {
+    try {
+        await req.message.deleteOne();
+
+        return res.status(200).json({
+            message: 'Message deleted'
+        });
+    } catch (err) {
+        console.error('Delete message error:', err);
+
+        return res.status(500).json({
+            message: 'Server error'
+        });
+    }
+};
+
 module.exports = {
     createMessage,
     getMessagesByClaim,
-    markMessageAsRead
+    markMessageAsRead,
+    deleteMessage
 }

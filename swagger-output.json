@@ -3,7 +3,7 @@
   "info": {
     "title": "Lost and Found API",
     "version": "1.0.0",
-    "description": "API reference for 19 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests."
+    "description": "API reference for 20 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests."
   },
   "servers": [
     {
@@ -750,7 +750,7 @@
         ],
         "operationId": "listPostClaims",
         "summary": "List claims for a post",
-        "description": "Post owner or administrator only. Returns private ownership claims, newest first. A malformed ID currently produces 500 rather than 400.",
+        "description": "Post owner or administrator only. Returns private ownership claims, newest first.",
         "parameters": [
           {
             "name": "id",
@@ -789,6 +789,19 @@
                     "__v": 0
                   }
                 ]
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid post ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid post ID"
+                }
               }
             }
           },
@@ -832,7 +845,7 @@
         ],
         "operationId": "createClaim",
         "summary": "Submit an ownership claim",
-        "description": "Signed-in users may claim another user's post once. Proof is private and must contain 10–1,000 characters after trimming. The current handler permits claims on posts of any status.",
+        "description": "Signed-in users may claim another user's post once. Proof is private and must contain 10–1,000 characters after trimming. Returned items cannot be claimed.",
         "parameters": [
           {
             "name": "id",
@@ -883,7 +896,7 @@
             }
           },
           "400": {
-            "description": "The post ID or ownership proof is invalid.",
+            "description": "Invalid post ID, invalid ownership proof, or returned item.",
             "content": {
               "application/json": {
                 "schema": {
@@ -909,6 +922,11 @@
                       "errors": [
                         "\"proof\" is required"
                       ]
+                    }
+                  },
+                  "returnedItem": {
+                    "value": {
+                      "message": "Cannot claim a returned item"
                     }
                   }
                 }
@@ -1029,7 +1047,7 @@
         ],
         "operationId": "getClaim",
         "summary": "Get a private claim",
-        "description": "Claimant, post owner, or administrator only. A malformed ID currently produces 500 rather than 400.",
+        "description": "Claimant, post owner, or administrator only.",
         "parameters": [
           {
             "name": "id",
@@ -1062,6 +1080,19 @@
                   "createdAt": "2026-11-19T15:05:00.000Z",
                   "updatedAt": "2026-11-19T15:05:00.000Z",
                   "__v": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid claim ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid claim ID"
                 }
               }
             }
@@ -1106,7 +1137,7 @@
         ],
         "operationId": "updateClaim",
         "summary": "Update proof on a pending claim",
-        "description": "Claimant or administrator only. Only pending claims can be edited. Proof must contain 10–1,000 characters after trimming. Unknown request fields are rejected. A malformed ID currently produces 500 rather than 400.",
+        "description": "Claimant or administrator only. Only pending claims can be edited. Proof must contain 10–1,000 characters after trimming. Unknown request fields are rejected.",
         "parameters": [
           {
             "name": "id",
@@ -1154,13 +1185,18 @@
             }
           },
           "400": {
-            "description": "Invalid ownership proof or a claim that is no longer pending.",
+            "description": "Invalid claim ID, invalid ownership proof, or a claim that is no longer pending.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "examples": {
+                  "invalidClaimId": {
+                    "value": {
+                      "message": "Invalid claim ID"
+                    }
+                  },
                   "invalidProof": {
                     "value": {
                       "message": "Validation error",
@@ -1218,7 +1254,7 @@
         ],
         "operationId": "deleteClaim",
         "summary": "Delete a claim",
-        "description": "Claimant or administrator only. Permanently deletes the claim rather than marking it withdrawn. Any claim status may be deleted; associated messages are not automatically removed. A malformed ID currently produces 500 rather than 400.",
+        "description": "Claimant or administrator only. Permanently deletes the claim rather than marking it withdrawn. Any claim status may be deleted; associated messages are not automatically removed.",
         "parameters": [
           {
             "name": "id",
@@ -1241,6 +1277,19 @@
                 },
                 "example": {
                   "message": "Claim deleted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Claim Id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid claim ID"
                 }
               }
             }
@@ -1287,7 +1336,7 @@
         ],
         "operationId": "reviewClaim",
         "summary": "Approve or reject a pending claim",
-        "description": "Post owner or administrator only. Only pending claims may be reviewed. Records the reviewer and review time. Approval does not change the post status. An optional review note must contain 1–1,000 characters after trimming; omit it for no note. Unknown fields are rejected. A malformed ID currently produces 500 rather than 400.",
+        "description": "Post owner or administrator only. Only pending claims may be reviewed. Records the reviewer and review time. Approval does not change the post status. An optional review note must contain 1–1,000 characters after trimming; omit it for no note. Unknown fields are rejected.",
         "parameters": [
           {
             "name": "id",
@@ -1335,13 +1384,18 @@
             }
           },
           "400": {
-            "description": "Invalid decision, invalid review note, or a claim that is no longer pending.",
+            "description": "Invalid claim ID, invalid decision, invalid review note, or a claim that is no longer pending.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "examples": {
+                  "invalidClaimId": {
+                    "value": {
+                      "message": "Invalid claim ID"
+                    }
+                  },
                   "invalidDecision": {
                     "value": {
                       "message": "Validation error",
@@ -1409,7 +1463,7 @@
         ],
         "operationId": "listClaimMessages",
         "summary": "List a claim's messages",
-        "description": "Intended for the claimant and post owner. Returns up to 100 messages, oldest first, without pagination. **Current limitation:** the participant check is not awaited and can cause an unhandled rejection. This endpoint cannot currently enforce private conversation access reliably.",
+        "description": "Only the claimant and post owner may access the conversation. Returns up to 100 messages, oldest first, without pagination.",
         "parameters": [
           {
             "name": "claimId",
@@ -1464,6 +1518,19 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "description": "The caller is not a conversation participant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Access denied"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Claim not found.",
             "content": {
@@ -1488,7 +1555,7 @@
         ],
         "operationId": "createMessage",
         "summary": "Send a message about a claim",
-        "description": "Intended for the claimant and post owner. Content must contain non-whitespace text; its raw length cannot exceed 5,000 characters. The sender comes from the session. **Current limitation:** the participant check fails with 500 for existing claims, so messages cannot currently be created.",
+        "description": "Only the claimant and post owner may send messages. Content must contain 1–5,000 characters after trimming. The sender comes from the authenticated session. Unknown request fields are rejected.",
         "parameters": [
           {
             "name": "claimId",
@@ -1512,8 +1579,28 @@
           }
         },
         "responses": {
+          "201": {
+            "description": "Message created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439015",
+                  "claimId": "507f1f77bcf86cd799439013",
+                  "senderId": "507f1f77bcf86cd799439014",
+                  "content": "I can provide a photo of the engraving to confirm ownership.",
+                  "readAt": null,
+                  "createdAt": "2026-11-19T15:10:00.000Z",
+                  "updatedAt": "2026-11-19T15:10:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
           "400": {
-            "description": "Invalid claim ID, missing claim, or invalid content. A missing claim currently returns 400 rather than 404.",
+            "description": "Invalid claim ID or message content.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1525,14 +1612,22 @@
                       "message": "Invalid claim Id"
                     }
                   },
-                  "claimNotFound": {
-                    "value": {
-                      "message": "Claim not found"
-                    }
-                  },
                   "invalidContent": {
                     "value": {
                       "message": "Message must contain 1-5000 characters"
+                    }
+                  },
+                  "missingContent": {
+                    "value": {
+                      "message": "Validation error",
+                      "errors": [
+                        "\"content\" is required"
+                      ]
+                    }
+                  },
+                  "invalidMessageData": {
+                    "value": {
+                      "message": "Invalid message data"
                     }
                   }
                 }
@@ -1541,6 +1636,32 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "The caller is not a conversation participant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Access Denied"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Claim not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Claim not found"
+                }
+              }
+            }
           },
           "500": {
             "$ref": "#/components/responses/ServerError"
@@ -1555,7 +1676,7 @@
         ],
         "operationId": "markMessageRead",
         "summary": "Mark a received message as read",
-        "description": "Intended for a conversation participant other than the sender. No request body is needed. **Current limitation:** the participant check fails with 500 for existing claims, so read receipts cannot currently be updated. A missing associated claim returns 403.",
+        "description": "Only a conversation participant other than the sender may mark a message as read. Records the read timestamp and preserves it on subsequent requests. No request body is needed. A missing associated claim returns 403.",
         "parameters": [
           {
             "name": "messageId",
@@ -1569,6 +1690,26 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Message marked as read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "example": {
+                  "_id": "507f1f77bcf86cd799439015",
+                  "claimId": "507f1f77bcf86cd799439013",
+                  "senderId": "507f1f77bcf86cd799439014",
+                  "content": "I can provide a photo of the engraving to confirm ownership.",
+                  "readAt": "2026-11-19T15:20:00.000Z",
+                  "createdAt": "2026-11-19T15:10:00.000Z",
+                  "updatedAt": "2026-11-19T15:10:00.000Z",
+                  "__v": 0
+                }
+              }
+            }
+          },
           "400": {
             "description": "Invalid message ID.",
             "content": {
@@ -1586,14 +1727,105 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "The message's associated claim was not found.",
+            "description": "The caller cannot mark this message as read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "accessDenied": {
+                    "value": {
+                      "message": "Access denied"
+                    }
+                  },
+                  "ownMessage": {
+                    "value": {
+                      "message": "Cannot mark your own message as read"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message not found.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "example": {
-                  "message": "Access denied"
+                  "message": "Message not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/messages/{id}": {
+      "delete": {
+        "tags": [
+          "Messages"
+        ],
+        "operationId": "deleteMessage",
+        "summary": "Delete a message",
+        "description": "Only the original sender may permanently delete their message. Authentication is required. No request body is needed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the message to delete.",
+            "schema": {
+              "$ref": "#/components/schemas/ObjectId"
+            },
+            "example": "507f1f77bcf86cd799439015"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                },
+                "example": {
+                  "message": "Message deleted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid message ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Invalid message ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Only the sender may delete this message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "message": "Forbidden: this is not your message."
                 }
               }
             }
@@ -2167,7 +2399,7 @@
             "description": "Message text. Whitespace-only values are rejected."
           }
         },
-        "description": "Must contain non-whitespace text. The length limit applies before trimming.",
+        "description": "Must contain non-whitespace text. The length limit applies after trimming.",
         "example": {
           "content": "I can provide a photo of the engraving to confirm ownership."
         }

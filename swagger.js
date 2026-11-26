@@ -248,24 +248,26 @@ const paths = {
   "/post/{id}/claims": {
     get: operation({
       tag: "Claims", id: "listPostClaims", summary: "List claims for a post",
-      description: "Post owner or administrator only. Returns private ownership claims, newest first. A malformed ID currently produces 500 rather than 400.",
+      description: "Post owner or administrator only. Returns private ownership claims, newest first.",
       parameters: [pathId("id", "ID of the post whose claims are requested.")],
       responses: {
         200: response("Claims for the post.", arrayOf("Claim"), [examples.claim]),
+        400: failure("Invalid post ID.", "Invalid post ID"),
         403: failure("Only the post owner or an administrator may view these claims.", "Forbidden"),
         404: failure("Post not found.", "Post not found"),
       },
     }),
     post: operation({
       tag: "Claims", id: "createClaim", summary: "Submit an ownership claim",
-      description: "Signed-in users may claim another user's post once. Proof is private and must contain 10–1,000 characters after trimming. The current handler permits claims on posts of any status.",
+      description: "Signed-in users may claim another user's post once. Proof is private and must contain 10–1,000 characters after trimming. Returned items cannot be claimed.",
       parameters: [pathId("id", "ID of the post being claimed.")], request: "WriteClaim",
       responses: {
         201: response("Claim submitted.", ref("CreateClaimResponse"), { message: "Claim submitted successfully", claim: examples.claim }),
-        400: errorExamples("The post ID or ownership proof is invalid.", {
+        400: errorExamples("Invalid post ID, invalid ownership proof, or returned item.", {
           invalidPostId: { message: "Invalid post ID" },
           invalidProof: { message: "Validation error", errors: ['"proof" length must be at least 10 characters long'] },
           missingProof: { message: "Validation error", errors: ['"proof" is required'] },
+          returnedItem: { message: "Cannot claim a returned item" },
         }),
         403: failure("You cannot claim your own post.", "Cannot claim your own post"),
         404: failure("Post not found.", "Post not found"),
@@ -286,21 +288,23 @@ const paths = {
   "/claims/{id}": {
     get: operation({
       tag: "Claims", id: "getClaim", summary: "Get a private claim",
-      description: "Claimant, post owner, or administrator only. A malformed ID currently produces 500 rather than 400.",
+      description: "Claimant, post owner, or administrator only.",
       parameters: [pathId("id", "ID of the ownership claim.", examples.claim._id)],
       responses: {
         200: response("Claim details.", ref("Claim"), examples.claim),
+        400: failure("Invalid claim ID.", "Invalid claim ID"),
         403: failure("The caller cannot access this claim.", "Forbidden"),
         404: failure("Claim or associated post not found.", "Claim not found"),
       },
     }),
     put: operation({
       tag: "Claims", id: "updateClaim", summary: "Update proof on a pending claim",
-      description: "Claimant or administrator only. Only pending claims can be edited. Proof must contain 10–1,000 characters after trimming. Unknown request fields are rejected. A malformed ID currently produces 500 rather than 400.",
+      description: "Claimant or administrator only. Only pending claims can be edited. Proof must contain 10–1,000 characters after trimming. Unknown request fields are rejected.",
       parameters: [pathId("id", "ID of the claim whose proof should change.", examples.claim._id)], request: "WriteClaim",
       responses: {
         200: response("Updated claim.", ref("Claim"), examples.claim),
-        400: errorExamples("Invalid ownership proof or a claim that is no longer pending.", {
+        400: errorExamples("Invalid claim ID, invalid ownership proof, or a claim that is no longer pending.", {
+          invalidClaimId: { message: "Invalid claim ID" },
           invalidProof: { message: "Validation error", errors: ['"proof" length must be at least 10 characters long'] },
           claimNotPending: { message: "Only pending claims can be updated" },
         }),
@@ -310,10 +314,11 @@ const paths = {
     }),
     delete: operation({
       tag: "Claims", id: "deleteClaim", summary: "Delete a claim",
-      description: "Claimant or administrator only. Permanently deletes the claim rather than marking it withdrawn. Any claim status may be deleted; associated messages are not automatically removed. A malformed ID currently produces 500 rather than 400.",
+      description: "Claimant or administrator only. Permanently deletes the claim rather than marking it withdrawn. Any claim status may be deleted; associated messages are not automatically removed.",
       parameters: [pathId("id", "ID of the claim to delete.", examples.claim._id)],
       responses: {
         200: messageResponse("Claim deleted.", "Claim deleted"),
+        400: failure("Invalid Claim Id.", "Invalid claim ID"),
         403: failure("The caller is neither the claimant nor an administrator.", "Forbidden"),
         404: failure("Claim not found.", "Claim not found"),
       },
@@ -322,11 +327,12 @@ const paths = {
   "/claims/{id}/status": {
     patch: operation({
       tag: "Claims", id: "reviewClaim", summary: "Approve or reject a pending claim",
-      description: "Post owner or administrator only. Only pending claims may be reviewed. Records the reviewer and review time. Approval does not change the post status. An optional review note must contain 1–1,000 characters after trimming; omit it for no note. Unknown fields are rejected. A malformed ID currently produces 500 rather than 400.",
+      description: "Post owner or administrator only. Only pending claims may be reviewed. Records the reviewer and review time. Approval does not change the post status. An optional review note must contain 1–1,000 characters after trimming; omit it for no note. Unknown fields are rejected.",
       parameters: [pathId("id", "ID of the claim to approve or reject.", examples.claim._id)], request: "ReviewClaim",
       responses: {
         200: response("Reviewed claim.", ref("Claim"), { ...examples.claim, status: "approved", reviewNote: "Ownership confirmed.", reviewedAt: "2026-11-19T15:15:00.000Z", reviewedBy: examples.post.user, updatedAt: "2026-11-19T15:15:00.000Z" }),
-        400: errorExamples("Invalid decision, invalid review note, or a claim that is no longer pending.", {
+        400: errorExamples("Invalid claim ID, invalid decision, invalid review note, or a claim that is no longer pending.", {
+          invalidClaimId: { message: "Invalid claim ID" },
           invalidDecision: { message: "Validation error", errors: ['"status" must be one of [approved, rejected]'] },
           invalidReviewNote: { message: "Validation error", errors: ['"reviewNote" is not allowed to be empty'] },
           claimNotPending: { message: "Only pending claims can be reviewed" },
@@ -339,46 +345,71 @@ const paths = {
   "/messages/claim/{claimId}": {
     get: operation({
       tag: "Messages", id: "listClaimMessages", summary: "List a claim's messages",
-      description: "Intended for the claimant and post owner. Returns up to 100 messages, oldest first, without pagination. **Current limitation:** the participant check is not awaited and can cause an unhandled rejection. This endpoint cannot currently enforce private conversation access reliably.",
+      description: "Only the claimant and post owner may access the conversation. Returns up to 100 messages, oldest first, without pagination.",
       parameters: [pathId("claimId", "ID of the claim associated with the conversation.", examples.claim._id)],
       responses: {
         200: response("Claim messages.", arrayOf("Message"), [examples.message]),
         400: failure("Invalid claim ID.", "Invalid claim Id"),
+        403: failure("The caller is not a conversation participant.", "Access denied"),
         404: failure("Claim not found.", "Claim not found"),
       },
     }),
     post: operation({
       tag: "Messages", id: "createMessage", summary: "Send a message about a claim",
-      description: "Intended for the claimant and post owner. Content must contain non-whitespace text; its raw length cannot exceed 5,000 characters. The sender comes from the session. **Current limitation:** the participant check fails with 500 for existing claims, so messages cannot currently be created.",
+      description: "Only the claimant and post owner may send messages. Content must contain 1–5,000 characters after trimming. The sender comes from the authenticated session. Unknown request fields are rejected.",
       parameters: [pathId("claimId", "ID of the claim associated with the conversation.", examples.claim._id)], request: "CreateMessage",
       responses: {
-        400: errorExamples("Invalid claim ID, missing claim, or invalid content. A missing claim currently returns 400 rather than 404.", {
+        201: response("Message created.", ref("Message"), examples.message),
+        400: errorExamples("Invalid claim ID or message content.", {
           invalidClaimId: { message: "Invalid claim Id" },
-          claimNotFound: { message: "Claim not found" },
           invalidContent: { message: "Message must contain 1-5000 characters" },
+          missingContent: { message: "Validation error", errors: ['"content" is required'] },
+          invalidMessageData: { message: "Invalid message data" },
         }),
+        403: failure("The caller is not a conversation participant.", "Access Denied"),
+        404: failure("Claim not found.", "Claim not found"),
       },
     }),
   },
   "/messages/{messageId}/read": {
     patch: operation({
       tag: "Messages", id: "markMessageRead", summary: "Mark a received message as read",
-      description: "Intended for a conversation participant other than the sender. No request body is needed. **Current limitation:** the participant check fails with 500 for existing claims, so read receipts cannot currently be updated. A missing associated claim returns 403.",
+      description: "Only a conversation participant other than the sender may mark a message as read. Records the read timestamp and preserves it on subsequent requests. No request body is needed. A missing associated claim returns 403.",
       parameters: [pathId("messageId", "ID of the message to mark as read.", examples.message._id)],
       responses: {
+        200: response("Message marked as read.", ref("Message"), {
+          ...examples.message,
+          readAt: "2026-11-19T15:20:00.000Z",
+        }),
         400: failure("Invalid message ID.", "Invalid message ID"),
-        403: failure("The message's associated claim was not found.", "Access denied"),
+        403: errorExamples("The caller cannot mark this message as read.", {
+          accessDenied: { message: "Access denied" },
+          ownMessage: { message: "Cannot mark your own message as read" },
+        }),
+        404: failure("Message not found.", "Message not found"),
+      },
+    }),
+  },
+
+  "/messages/{id}": {
+    delete: operation({
+      tag: "Messages", id: "deleteMessage", summary: "Delete a message",
+      description: "Only the original sender may permanently delete their message. Authentication is required. No request body is needed.",
+      parameters: [pathId("id", "ID of the message to delete.", examples.message._id)],
+      responses: {
+        200: messageResponse("Message deleted.", "Message deleted"),
+        400: failure("Invalid message ID.", "Invalid message ID"),
+        403: failure("Only the sender may delete this message.", "Forbidden: this is not your message."),
         404: failure("Message not found.", "Message not found"),
       },
     }),
   },
 };
-
 const document = {
   openapi: "3.0.3",
   info: {
     title: "Lost and Found API", version: "1.0.0",
-    description: "API reference for 19 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests.",
+    description: "API reference for 20 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests.",
   },
   servers: [{ url: "/", description: "Current API origin" }],
   tags: [
@@ -453,7 +484,7 @@ const document = {
       },
       CreateMessage: {
         ...object({ content: { type: "string", minLength: 1, maxLength: 5000, pattern: "\\S", description: "Message text. Whitespace-only values are rejected." } }, ["content"]),
-        description: "Must contain non-whitespace text. The length limit applies before trimming.",
+        description: "Must contain non-whitespace text. The length limit applies after trimming.",
         example: { content: examples.message.content },
       },
     },
