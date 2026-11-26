@@ -1,6 +1,7 @@
 
-// const { validateRequest } = require('./validateRequest');
+const { validateRequest } = require('./validateRequest');
+const { messageSchema } = require('../validators/messageSchemas');
 
-// const validateMessage = validateRequest('./validators/messageSchema');
+const validateMessage = validateRequest(messageSchema);
 
-// module.exports = { validateMessage };
+module.exports = { validateMessage };

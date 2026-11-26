@@ -3,7 +3,7 @@ const Message = require('../models/Message');
 
 async function ensureMessageOwner(req, res, next) {
     try {
-        const { id } = req.parmas;
+        const { id } = req.params;
 
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({
@@ -14,7 +14,7 @@ async function ensureMessageOwner(req, res, next) {
         const message = await Message.findById(id);
 
         if (!message) {
-            return res.statsu(404).json({
+            return res.status(404).json({
                 message: 'Message not found'
             });
         }
@@ -36,7 +36,7 @@ async function ensureMessageOwner(req, res, next) {
     } catch (err) {
         console.error('Message ownership check failed:', err);
         return res.status(500).json({
-            message: 'Server errof'
+            message: 'Server error'
         });
     }
 }
