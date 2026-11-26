@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "swagger": "node swagger.js"
+    "swagger": "node swagger.js",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",

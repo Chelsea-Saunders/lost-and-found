@@ -2,11 +2,63 @@ const Post = require('../models/Post');
 
 const getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.find().sort({ createdAt: -1 });
+        const {
+            search,
+            category,
+            status,
+            startDate,
+            endDate
+        } = req.searchFilters || {};
+
+        const filter = {};
+
+        // search by keyword
+        if (search) {
+            const escapedSearch = search.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            );
+
+            filter.$or = [
+                { title: { $regex: escapedSearch, $options: 'i' } },
+                { content: { $regex: escapedSearch, $options: 'i' } }
+            ];
+        }
+
+        // filter by category
+        if (category) {
+            filter.category = category;
+        }
+
+        // filter by status
+        if (status) {
+            filter.status = status;
+        }
+
+        // filter by post created date
+        if (startDate || endDate) {
+            filter.createdAt = {};
+
+            if (startDate) {
+                filter.createdAt.$gte = startDate;
+            }
+
+            if (endDate) {
+                const endOfDay = new Date(endDate);
+                endOfDay.setUTCHours(23, 59, 59, 999);
+                filter.createdAt.$lte = endOfDay;
+            }
+        }
+        const posts = await Post.find(filter).sort({ createdAt: -1 });
+
         res.json(posts);
+
     } catch (err) {
+
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({
+            message: 'Server error'
+        });
     }
 };
 

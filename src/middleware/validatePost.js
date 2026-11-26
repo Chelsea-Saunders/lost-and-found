@@ -1,3 +1,5 @@
+const { postSearchSchema } = require('../validators/postSearchSchema');
+
 const validCategories = [
     'jewelry',
     'household',
@@ -32,7 +34,7 @@ function validateCreatePost(req, res, next) {
     }
 
     if (
-        status !== undefined && 
+        status !== undefined &&
         !['lost', 'found'].includes(status)
     ) {
         return res.status(400).json({
@@ -70,8 +72,8 @@ function validateUpdatePost(req, res, next) {
         return res.status(400).json({
             message: 'Invalid category'
         });
-    } 
-    
+    }
+
     if (
         category !== undefined &&
         !validStatuses.includes(status)
@@ -84,7 +86,25 @@ function validateUpdatePost(req, res, next) {
     next();
 }
 
+function validateSearchPosts(req, res, next) {
+    const { error, value } = postSearchSchema.validate(
+        req.query,
+        { abortEarly: false }
+    );
+
+    if (error) {
+        return res.status(400).json({
+            message: 'Validation error',
+            errors: error.details.map((d) => d.message)
+        });
+    }
+
+    req.searchFilters = value;
+    next();
+}
+
 module.exports = {
     validateCreatePost,
-    validateUpdatePost
-}
+    validateUpdatePost,
+    validateSearchPosts
+};

@@ -74,9 +74,84 @@ function operation({ tag, id, summary, description, public: isPublic = false, pa
 const paths = {
   "/post": {
     get: operation({
-      tag: "Posts", id: "listPosts", public: true, summary: "List lost and found posts",
-      description: "Returns all posts, newest first. Available to everyone. Filtering and pagination are not supported.",
-      responses: { 200: response("All posts.", arrayOf("Post"), [examples.post]) },
+      tag: "Posts",
+      id: "listPosts",
+      public: true,
+      summary: "Search and filter lost and found posts",
+      description: "Returns matching posts, newest first. Available to everyone. All search parameters are optional and can be combined. If no filters are provided, all posts are returned. Pagination is not supported.",
+      parameters: [
+        {
+          name: "search",
+          in: "query",
+          required: false,
+          description: "Case-insensitive keyword search in the post title or content. Maximum 100 characters after trimming.",
+          schema: {
+            type: "string",
+            minLength: 1,
+            maxLength: 100
+          },
+          example: "wallet"
+        },
+        {
+          name: "category",
+          in: "query",
+          required: false,
+          description: "Filter posts by category.",
+          schema: category,
+          example: "jewelry"
+        },
+        {
+          name: "status",
+          in: "query",
+          required: false,
+          description: "Filter posts by status.",
+          schema: postFields.status,
+          example: "lost"
+        },
+        {
+          name: "startDate",
+          in: "query",
+          required: false,
+          description: "Return posts created on or after this date (UTC). Use YYYY-MM-DD or leave empty.",
+          schema: {
+            type: "string"
+          }
+        },
+        {
+          name: "endDate",
+          in: "query",
+          required: false,
+          description: "Return posts created through the end of this date (UTC). Use YYYY-MM-DD or leave empty. Must not be earlier than startDate.",
+          schema: {
+            type: "string"
+          }
+        }
+      ],
+      responses: {
+        200: response(
+          "Matching posts, newest first. Returns an empty array if no posts match.",
+          arrayOf("Post"),
+          [examples.post]
+        ),
+        400: errorExamples("Invalid search or filter parameters.", {
+          invalidStatus: {
+            message: "Validation error",
+            errors: ['"status" must be one of [lost, found, returned]']
+          },
+          invalidCategory: {
+            message: "Validation error",
+            errors: ['"category" must be one of [jewelry, household, pet, clothing, other]']
+          },
+          invalidDateRange: {
+            message: "Validation error",
+            errors: ['"endDate" must be greater than or equal to "ref:startDate"']
+          },
+          invalidDateFormat: {
+            message: "Validation error",
+            errors: ['"startDate" must be in ISO 8601 date format']
+          }
+        })
+      },
     }),
     post: operation({
       tag: "Posts", id: "createPost", summary: "Create a post",
