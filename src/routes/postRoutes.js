@@ -7,13 +7,15 @@ const { updateStatus } = require('../controllers/updateStatusController');
 
 const { 
     validateCreatePost,
-    validateUpdatePost 
+    validateUpdatePost,
+    validateSearchPosts
 } = require('../middleware/validatePost');
 
 const postController = require('../controllers/postControllers');
 
 router.get(
     '/', 
+    validateSearchPosts,
     postController.getAllPosts);
 router.get(
     '/:id', 
