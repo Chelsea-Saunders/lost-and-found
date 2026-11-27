@@ -1,8 +1,105 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Post = require('../models/Post');
+const Item = require('../models/Item');
+const Claim = require('../models/Claim');
+const Message = require('../models/Message');
 
 // fields safe to return from user endpoints
 const publicFields = 'name email role createdAt';
+
+const getMyProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id)
+            .select(publicFields)
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json(user);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const updateMyProfile = async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: req.profileUpdates },
+            { new: true, runValidators: true },
+        ).select(publicFields).lean();
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json(user);
+    } catch (err) {
+        if (err.code === 11000) {
+            return res.status(409).json({ message: 'Email address is already in use' });
+        }
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Invalid profile data' });
+        }
+        console.error(err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const deleteMyAccount = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id)
+            .select(publicFields)
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.role === 'admin' && await User.countDocuments({ role: 'admin' }) <= 1) {
+            return res.status(409).json({ message: 'Cannot delete the last administrator' });
+        }
+
+        const relatedRecords = await Promise.all([
+            Post.exists({ user: user._id }),
+            Item.exists({ userId: user._id }),
+            Claim.exists({ $or: [{ userId: user._id }, { reviewedBy: user._id }] }),
+            Message.exists({ senderId: user._id }),
+        ]);
+
+        if (relatedRecords.some(Boolean)) {
+            return res.status(409).json({
+                message: 'Cannot delete account while related records exist',
+            });
+        }
+
+        // End the session before deleting the account, so session failures leave it intact.
+        await new Promise((resolve, reject) => {
+            req.logout(err => err ? reject(err) : resolve());
+        });
+        if (req.session) {
+            await new Promise((resolve, reject) => {
+                req.session.destroy(err => err ? reject(err) : resolve());
+            });
+        }
+
+        const deletedUser = await User.findByIdAndDelete(user._id);
+        res.clearCookie('connect.sid');
+
+        if (!deletedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({ message: 'Account deleted' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
 
 // get all users
 const getAllUsers = async(req, res) => {
@@ -169,6 +266,9 @@ const updateUserRole = async (req, res) => {
 };
 
 module.exports = {
+    getMyProfile,
+    updateMyProfile,
+    deleteMyAccount,
     getAllUsers, 
     getUserById,
     updateUserRole

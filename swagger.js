@@ -190,11 +190,12 @@ const paths = {
     }),
     delete: operation({
       tag: "Posts", id: "deletePost", summary: "Delete your post",
-      description: "Owner only. **Current limitation:** a conflicting ownership check rejects requests from the post owner with 403, so deletion does not currently complete.",
+      description: "Deletes a post owned by the signed-in user. Administrators do not bypass ownership checks. Associated claims and messages are not automatically deleted.",
       parameters: [pathId()],
       responses: {
+        200: messageResponse("Post deleted.", "Post deleted"),
         400: failure("Invalid post ID.", "invalid post ID"),
-        403: failure("Ownership check rejected the request.", "Forbidden"),
+        403: failure("The current user does not own the post.", "Forbidden: This is not your post."),
         404: failure("Post not found.", "Post not found"),
       },
     }),
@@ -202,10 +203,11 @@ const paths = {
   "/post/{id}/status": {
     patch: operation({
       tag: "Posts", id: "updatePostStatus", summary: "Update your post's status",
-      description: "Owner only. **Current limitation:** the handler accepts open, pending, closed, or archived, which conflict with the Post model's lost, found, or returned values. Accepted values currently return 500. The request schema reflects the current handler; no successful status change is currently available.",
+      description: "Saves the status of a post owned by the signed-in user. Accepts lost, found, or returned. Administrators do not bypass ownership checks.",
       parameters: [pathId()], request: "UpdatePostStatus",
       responses: {
-        400: failure("Invalid post ID or status.", "Invalid status. Must be one of: open, pending, closed, archived"),
+        200: response("Post status saved.", object({ message: { type: "string" }, item: ref("Post") }, ["message", "item"]), { message: "Status updated successfully", item: { ...examples.post, status: "returned" } }),
+        400: failure("Invalid post ID or status.", "Invalid status. Must be one of: lost, found, returned"),
         403: failure("The current user does not own the post.", "Forbidden: This is not your post."),
         404: failure("Post not found.", "Post not found"),
       },
@@ -218,6 +220,42 @@ const paths = {
       responses: {
         200: response("User profiles.", arrayOf("User"), [examples.user]),
         403: failure("Administrator role required.", "Forbidden: Admins only"),
+      },
+    }),
+  },
+  "/users/me": {
+    get: operation({
+      tag: "Users", id: "getMyProfile", summary: "Get your profile",
+      description: "Returns the signed-in user's public profile, using the user ID from the browser session. No ID parameter is needed. OAuth provider identifiers are excluded.",
+      responses: {
+        200: response("Your profile.", ref("User"), examples.user),
+        404: failure("The account no longer exists.", "User not found"),
+      },
+    }),
+    put: operation({
+      tag: "Users", id: "updateMyProfile", summary: "Update your profile",
+      description: "Updates only the signed-in user's name and/or email. Submit at least one field. Names are trimmed and must contain 1–100 characters; emails are trimmed, lowercased, validated, and limited to 254 characters. Omitted fields keep their current values. Roles, provider identifiers, IDs, passwords, and other unknown fields are rejected.",
+      request: "UpdateProfile",
+      responses: {
+        200: response("Your saved profile.", ref("User"), { ...examples.user, name: "Alex Morgan" }),
+        400: errorExamples("Invalid profile fields or an empty request body.", {
+          invalidName: { message: "Validation error", errors: ['"name" is not allowed to be empty'] },
+          protectedField: { message: "Validation error", errors: ['"role" is not allowed'] },
+        }),
+        404: failure("The account no longer exists.", "User not found"),
+        409: failure("Another account already uses that email address.", "Email address is already in use"),
+      },
+    }),
+    delete: operation({
+      tag: "Users", id: "deleteMyAccount", summary: "Delete your account",
+      description: "Deletes only the signed-in account. No request body is needed. Deletion is blocked while posts, legacy items, claims submitted or reviewed by this user, or messages sent by this user reference the account. Related records are preserved. The last administrator cannot delete their account. On success the current login session is ended, its stored session is destroyed, and the session cookie is cleared. Signing in again with a provider can create a new account.",
+      responses: {
+        200: messageResponse("Account deleted and current session ended.", "Account deleted"),
+        404: failure("The account no longer exists.", "User not found"),
+        409: errorExamples("Related records exist or the account is the last administrator.", {
+          relatedRecords: { message: "Cannot delete account while related records exist" },
+          lastAdministrator: { message: "Cannot delete the last administrator" },
+        }),
       },
     }),
   },
@@ -409,12 +447,20 @@ const document = {
   openapi: "3.0.3",
   info: {
     title: "Lost and Found API", version: "1.0.0",
-    description: "API reference for 20 collection operations: Posts, Users, Claims, and Messages. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Access requirements and current handler limitations are stated on each operation. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests.",
+    description: [
+      "API reference for 23 collection operations: Posts, Users, Claims, and Messages. The post API is mounted at `/post`. Send JSON request bodies with Content-Type: application/json. IDs are 24-character MongoDB ObjectIds; timestamps are ISO 8601 UTC strings. Response examples illustrate the documented structure; replace example IDs with IDs from your database before sending requests.",
+      "### Authentication flow",
+      "1. Open [login options](/login) and choose Google or GitHub. Login starts at `GET /auth/google` or `GET /auth/github` and opens in a new tab. The provider must be configured for this API origin.",
+      "2. The provider returns to `/auth/google/callback` or `/auth/github/callback`. Successful login creates a browser session and redirects to `GET /auth/me`, which returns the account ID and display name. Authentication failure returns `401` at `/auth/failure`.",
+      "3. Return to Swagger on the same origin in the same browser. Requests use the HttpOnly `connect.sid` session cookie automatically. Use `GET /users/me` to read your full public profile. Access requirements and role restrictions are described on each operation; missing authentication returns `401` and insufficient permissions return `403`.",
+      "4. End the login with `POST /auth/logout`. Authentication routes are described here while the operation list stays grouped by collection. The API navigation page and Swagger documentation are public.",
+      "Current handler limitations are stated on the affected operations. Profile deletion preserves related records and returns `409` until those references are removed.",
+    ].join("\n\n"),
   },
   servers: [{ url: "/", description: "Current API origin" }],
   tags: [
     { name: "Posts", description: "Browse lost and found posts. Create and manage your own posts." },
-    { name: "Users", description: "User profiles and administrator role changes." },
+    { name: "Users", description: "Read, update, or delete your own profile. Administrator user listing and role changes." },
     { name: "Claims", description: "Submit private ownership proof and review recovery requests." },
     { name: "Messages", description: "Private conversations associated with an ownership claim." },
   ],
@@ -440,14 +486,24 @@ const document = {
       },
       UpdatePost: { ...object(postFields), description: "All fields are optional. See the operation's current persistence and validation limitations before sending an update.", example: { title: "Silver ring returned to its owner", status: "returned" } },
       UpdatePostStatus: {
-        ...object({ status: { type: "string", enum: ["open", "pending", "closed", "archived"] } }, ["status"]),
-        description: "Current handler values conflict with the Post status enum; see the operation's implementation note.",
-        example: { status: "closed" },
+        ...object({ status: postFields.status }, ["status"]),
+        description: "The status to save on the current user's post.",
+        example: { status: "returned" },
       },
       User: {
         ...object({ _id: ref("ObjectId"), name: { type: "string", description: "User's display name." }, email: { type: "string", format: "email", nullable: true, description: "Email address, when available." }, role, createdAt: dateTime }, ["_id", "name", "role"]),
         description: "Public profile fields selected by /users endpoints. createdAt may be absent because automatic timestamps are not enabled on the User model.",
         example: examples.user,
+      },
+      UpdateProfile: {
+        ...object({
+          name: { type: "string", minLength: 1, maxLength: 100, pattern: "\\S", description: "Display name, trimmed before saving." },
+          email: { type: "string", format: "email", maxLength: 254, description: "Contact email, trimmed and lowercased. Must be unique." },
+        }),
+        minProperties: 1,
+        additionalProperties: false,
+        description: "Supply name, email, or both. All other fields are rejected. Omitted fields are unchanged.",
+        example: { name: "Alex Morgan", email: "alex.morgan@example.com" },
       },
       UpdateRole: { ...object({ role: { ...role, description: "Requested application role." } }, ["role"]), example: { role: "user" } },
       Claim: {

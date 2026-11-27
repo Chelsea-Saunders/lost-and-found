@@ -1,15 +1,16 @@
 # CSE341-Final
 
 ## OVERVIEW
-Our Lost and Found app helps people in a specific community or location share items they’ve found and search for items they have lost. All visitors can browse posted items, but users must log in to create posts, edit their own posts, or leave comments. When an item is returned to its owner, the original poster can update the status to “returned”, and the post can later be removed by an admin. Admin users have full control over the platform, including the ability to view, edit, or delete any post as well as remove inappropriate posts or comments. 
+Our Lost and Found API lets community members browse lost and found posts, submit private ownership claims, and exchange messages about a claim. Visitors can search public posts. Google or GitHub login creates a browser session for protected operations. Signed-in users can manage their own profiles; post owners and administrators can review ownership claims. The mounted collection routes and current implementation limitations are documented at `/api-docs/`.
 
 ## KEY FEATURES
-- Public dashboard where anyone can view lost and found posts
-- Secure login required to create, edit, and comment on posts
-- User controls for managing their own posts
-- Status updates to mark an item as returned
-- Admin moderation tools for editing or deleting any post
-- Flexible content management for maintaining an organized and trusted community board
+- Public post browsing, keyword search, and category, status, and date filters
+- Google and GitHub OAuth with MongoDB-backed browser sessions
+- Self-service profile reading, name/email updates, and guarded account deletion
+- Private ownership claims and conversations between claimants and post owners
+- Post status changes to lost, found, or returned
+- Administrator user listing and claim review
+- Interactive Swagger documentation grouped by collection
 
 ## BENEFITS
 -Makes it easier for people to recover lost items
@@ -27,63 +28,19 @@ Our Lost and Found app helps people in a specific community or location share it
 - Any inappropriate communication can be removed
 
 ## DATABASE
-1. Items
-Stores information about lost and found items posted by users.
-Fields:
-_id: Unique identifier for the item.
-title: Name or title of the item.
-description: Detailed description of the item.
-type: Indicates whether the item is lost or found.
-category: Category of the item (e.g., Electronics, Clothing, Keys).
-imageUrl: URL of the item's image (maximum one image per post).
-location: Location where the item was lost or found.
-eventDate: Date and time when the item was lost or found.
-status: Current status of the post (open or closed).
-userId: Reference to the user who created the post.
-createdAt: Date and time when the post was created.
-updatedAt: Date and time of the last update.
 
-2. Users
-Stores user profile information obtained through Google OAuth and manages application permissions.
-Fields:
-_id: Unique identifier for the user.
-name: User's full name.
-email: User's email address.
-googleId: Unique identifier provided by Google OAuth.
-role: User permission level (user or admin).
-createdAt: Date and time when the user account was created.
+The collection API uses these models:
 
-3. Claims
-Tracks requests from users who want to recover found items. Stores private ownership evidence and claim review decisions.
-Fields:
-_id: Unique identifier for the claim.
-itemId: Reference to the found item being claimed.
-userId: Reference to the user requesting the item.
-proof: Private description or evidence showing ownership.
-status: Current claim status (pending, approved, rejected, or withdrawn).
-reviewNote: Optional private explanation of the review decision.
-createdAt: Date and time when the claim was submitted.
-reviewedAt: Date and time when the claim was approved or rejected (optional).
+| Collection | Fields and relationships |
+| --- | --- |
+| `posts` | `_id`, `user` (owner ID), `title`, `content`, `category`, `status`, `createdAt`, `updatedAt`. Categories: `jewelry`, `household`, `pet`, `clothing`, `other`. Statuses: `lost`, `found`, `returned`. |
+| `users` | `_id`, `name`, optional `email`, provider identifiers `googleId`/`githubId`, and `role` (`user` or `admin`). Public profile responses exclude provider identifiers. `createdAt` is selected when present, but automatic user timestamps are not currently enabled. |
+| `claims` | `_id`, `postId`, `userId` (claimant), private `proof` (10–1,000 characters), `status` (`pending`, `approved`, `rejected`), `reviewNote`, `reviewedAt`, `reviewedBy`, `createdAt`, `updatedAt`. |
+| `messages` | `_id`, `claimId`, `senderId`, `content` (1–5,000 characters after trimming), optional `readAt`, `createdAt`, `updatedAt`. |
 
-4. Messages
-Stores private messages between the person who posted a found item and the user requesting its return. Messages are associated with a specific claim.
-Fields:
-_id: Unique identifier for the message.
-claimId: Reference to the associated claim.
-senderId: Reference to the user who sent the message.
-content: Message text (1–2,000 characters).
-readAt: Date and time when the message was read (optional).
-createdAt: Date and time when the message was sent.
+A legacy `Item` model and `items` collection also remain in the project. They do not expose `/items` API routes. Session records are stored in MongoDB separately.
 
-** Database Relationships **
-Each user can create multiple lost or found item posts.
-Each found item can have multiple ownership claims.
-Each claim belongs to one found item and one user (the claimant).
-Each claim can have multiple private messages.
-Each message belongs to one claim and one user (the sender).
-Users can exchange private messages related to a claim.
-Only the item publisher or an authorized administrator can approve or reject claims.
-Users will only be allowed to modify or delete their own posts, while administrators will have permission to manage all posts.
+Users own posts; claims reference a post and a claimant; messages reference a claim and sender. Deleting a post or claim does not automatically delete its related records. Self-service account deletion instead returns `409` while a post, legacy item, submitted/reviewed claim, or sent message references that user, preserving other users' records. The last administrator also cannot delete their account.
 
 ## SCHEDULE
 Week 9: Create collections, connect MongoDB and refactor layout, API documentation, and complete proposal 
@@ -95,51 +52,92 @@ Week14: Turn in
 
 
 ## API ENDPOINTS
-The Lost and Found application will provide RESTful API endpoints for managing users, lost and found items, ownership claims, and private messages.
-1. Items
-GET /items – Retrieve all items with optional filters.
-GET /items/:id – Retrieve an item by ID.
-POST /items – Create a lost or found item post.
-PUT /items/:id – Update an item.
-DELETE /items/:id – Delete an item.
-PATCH /items/:id/status – Update the status of an item.
 
-2. Users
-GET /users – Retrieve all users (admin only).
-GET /users/:id – Retrieve a user's information.
-GET /users/me – Retrieve the authenticated user's profile.
-PUT /users/me – Update the authenticated user's profile.
-DELETE /users/me – Delete the authenticated user's account.
-PATCH /users/:id/role – Update a user's role (admin only).
+The current API exposes **23 collection operations**, documented in Swagger. `/post` is the canonical post path. IDs in the tables below are MongoDB ObjectIds; `/users/me` obtains the account ID from the authenticated session.
 
-3. Claims
-GET /claims – Retrieve claims accessible to the authenticated user.
-GET /claims/:id – Retrieve claim details.
-GET /items/:id/claims – Retrieve claims associated with an item.
-POST /items/:id/claims – Submit an ownership claim.
-PUT /claims/:id – Update a pending ownership claim.
-DELETE /claims/:id – Withdraw an ownership claim.
-PATCH /claims/:id/status – Approve or reject an ownership claim.
+### Posts
 
-4. Messages
-GET /claims/:id/messages – Retrieve messages associated with a claim.
-GET /messages/:id – Retrieve a specific message.
-POST /claims/:id/messages – Send a private message.
-PUT /messages/:id – Update a message.
-DELETE /messages/:id – Delete a message.
-PATCH /messages/:id/read – Mark a message as read.
+| Method | Path | Access and behavior |
+| --- | --- | --- |
+| GET | `/post` | Public. Lists/searches posts; optional `search`, `category`, `status`, `startDate`, and `endDate` filters. No pagination. |
+| GET | `/post/:id` | Public. Retrieves one post. |
+| POST | `/post` | Signed in. Creates a lost/found post owned by the current user. |
+| PUT | `/post/:id` | Owner only. Current persistence limitation is described below and in Swagger. |
+| DELETE | `/post/:id` | Owner only. Permanently deletes the post. |
+| PATCH | `/post/:id/status` | Owner only. Saves `lost`, `found`, or `returned`. |
 
-5. Authentication
-GET /auth/google – Initiate Google OAuth authentication.
-GET /auth/google/callback – Handle the Google OAuth callback.
-GET /auth/me – Retrieve the authenticated session.
-POST /auth/logout – Log out the authenticated user.
-All endpoints will include input validation, error handling, and appropriate authorization controls. The API will be documented using Swagger and deployed to Render.
+### Users
 
+| Method | Path | Access and behavior |
+| --- | --- | --- |
+| GET | `/users` | Administrator only. Lists public profiles. |
+| GET | `/users/me` | Signed in. Returns your public profile. |
+| PUT | `/users/me` | Signed in. Updates your `name`, `email`, or both. |
+| DELETE | `/users/me` | Signed in. Deletes your unreferenced account and ends the current session; returns `409` for related records or the last administrator. |
+| GET | `/users/:id` | The same user or an administrator. Returns a public profile. |
+| PATCH | `/users/:id/role` | Administrator only. Current handler limitation is described below and in Swagger. |
 
+Profile updates require a nonempty JSON object. Only `name` and `email` are accepted; omitted fields stay unchanged. Names are trimmed and limited to 1–100 characters. Emails are trimmed, lowercased, validated, limited to 254 characters, and must be unique. Attempts to change roles, IDs, passwords, provider identifiers, or other unknown fields return `400`; an email conflict returns `409`.
 
+Account deletion never cascades into other collections. On success it returns `{ "message": "Account deleted" }`, logs out the current browser session, destroys that session, and clears `connect.sid`. Subsequent protected requests need authentication. A later provider login can create a new account.
 
+### Claims
 
+| Method | Path | Access and behavior |
+| --- | --- | --- |
+| GET | `/claims` | Administrator only. Lists all claims. |
+| GET | `/claims/:id` | Claimant, post owner, or administrator. |
+| GET | `/post/:id/claims` | Post owner or administrator. Lists claims for a post. |
+| POST | `/post/:id/claims` | Signed in. Claims another user's post; returned posts cannot be claimed. |
+| PUT | `/claims/:id` | Claimant or administrator. Updates proof on a pending claim. |
+| DELETE | `/claims/:id` | Claimant or administrator. Permanently deletes the claim; messages are not automatically deleted. |
+| PATCH | `/claims/:id/status` | Post owner or administrator. Approves/rejects a pending claim; does not change the post status. |
+
+### Messages
+
+| Method | Path | Access and behavior |
+| --- | --- | --- |
+| GET | `/messages/claim/:claimId` | Claimant or post owner. Returns up to 100 messages, oldest first. |
+| POST | `/messages/claim/:claimId` | Claimant or post owner. Sends a message as the current user. |
+| PATCH | `/messages/:messageId/read` | Conversation participant other than the sender. Marks a received message as read. |
+| DELETE | `/messages/:id` | Sender only. Permanently deletes a message. |
+
+### Authentication flow
+
+Authentication routes are explained here and in the Swagger introduction. The Swagger operation list stays limited to the 23 collection operations.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/auth/google` | Starts Google login. |
+| GET | `/auth/google/callback` | Google callback; success redirects to `/auth/me`. |
+| GET | `/auth/github` | Starts GitHub login. |
+| GET | `/auth/github/callback` | GitHub callback; success redirects to `/auth/me`. |
+| GET | `/auth/me` | Returns session status plus user ID/display name, or `401` when signed out. |
+| GET | `/auth/failure` | Returns an OAuth failure with `401`. |
+| POST | `/auth/logout` | Ends the current login and clears the browser cookie. |
+
+1. Start the app and open `/` or `/login`. Select Google or GitHub; sign-in opens in a new tab. Each provider needs its client ID, client secret, and callback URL configured. The callback must match the API origin and the URI registered with that provider.
+2. Complete provider login. The callback creates a server-side session, sets the HttpOnly `connect.sid` cookie, and redirects to `/auth/me`.
+3. Return to `/api-docs/` on the **same origin in the same browser**. Swagger sends that session cookie automatically. No token needs to be pasted into Swagger. Call `GET /users/me` to retrieve your profile, then try the protected operations permitted for that account.
+4. Log out with `POST /auth/logout`. For example, from the browser console while viewing this API:
+
+   ```js
+   fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
+   ```
+
+Protected routes return `401` without a session and `403` when the account lacks the required permission. The navigation and documentation pages remain public. The app also mounts the authentication router without `/auth` as legacy aliases; use the canonical `/auth/*` paths above.
+
+### Other mounted administrator routes
+
+`GET /admin/users`, `GET /admin/users/:id`, and `PATCH /admin/users/:id/role` are administrator-only routes. They remain outside the collection Swagger operation list.
+
+### Current implementation limitations
+
+- `PUT /post/:id` does not persist updates; its handler reads `req.item` while the ownership middleware sets `req.post`, and its save call is disabled. A category-only update is also incorrectly rejected. Use Swagger's operation notes when testing.
+- `PATCH /users/:id/role` currently fails on otherwise valid requests because of existing handler typos. Its Swagger description records this limitation.
+- `GET /post/:id` returns `500` for a malformed ID. Other validation and error responses are documented per operation.
+
+These existing handlers are unchanged by the self-service profile implementation.
 
 ## Local environment
 
@@ -167,7 +165,7 @@ OAuth providers are registered only when all three of their settings are present
 MongoDB and `SESSION_SECRET` are required even when OAuth is not configured.
 
 Run `npm ci`, `npm run swagger`, and `npm start`. Open `/` for navigation or
-`/api-docs/` for the 19 collection operations. Swagger uses the current API origin.
+`/api-docs/` for the 23 collection operations. Swagger uses the current API origin.
 
 ## CREATING A GITHUB BRANCH, PULLING AND PUSHING REMINDER
 git checkout -b feature /name-of-new-branch. // create the branch

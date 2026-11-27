@@ -7,6 +7,12 @@ const {
 } = require('../middleware/auth');
 
 const userController = require('../controllers/userControllers');
+const { validateProfileUpdate } = require('../middleware/validateUser');
+
+// Register literal self-service paths before /:id.
+router.get('/me', ensureAuth, userController.getMyProfile);
+router.put('/me', ensureAuth, validateProfileUpdate, userController.updateMyProfile);
+router.delete('/me', ensureAuth, userController.deleteMyAccount);
 
 router.get(
     '/', 
